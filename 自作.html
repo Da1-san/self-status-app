@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>セルフステータス管理</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.1/dist/pouchdb.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-indigo-50 to-purple-100 min-h-screen p-4 md:p-6">
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-extrabold text-center mb-6 text-indigo-700">セルフステータス管理</h1>
+
+    <!-- タブ切替 -->
+    <div class="flex justify-center mb-6">
+      <button id="tabMain" class="px-4 py-2 rounded-l-lg bg-indigo-600 text-white">ステータス</button>
+      <button id="tabManage" class="px-4 py-2 rounded-r-lg bg-gray-200">管理画面</button>
+    </div>
+
+    <!-- === ステータス画面 === -->
+    <div id="mainView">
+      <!-- 入力フォーム -->
+      <div class="bg-white shadow-lg rounded-2xl p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">データ入力</h2>
+        <form id="statusForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium">筋力 (ベンチ重量 kg)</label>
+            <input type="number" id="training" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">知力 (累積学習時間 h)</label>
+            <input type="number" id="study" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">回復力 (睡眠時間 h)</label>
+            <input type="number" id="sleep" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">継続力 (継続日数)</label>
+            <input type="number" id="continuity" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">生産性 (スクリーンタイム h)</label>
+            <input type="number" id="productivity" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium">精神力 (継続日数)</label>
+            <input type="number" id="mental" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          </div>
+          <div class="col-span-1 md:col-span-2 text-right">
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700 transition">
+              保存
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- レベル表示 -->
+      <div class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl shadow-xl p-6 mb-8">
+        <h2 class="text-xl font-bold mb-2">レベル</h2>
+        <div class="flex items-center justify-between mb-2">
+          <span id="levelValue" class="text-3xl font-extrabold">--</span>
+          <span class="text-sm opacity-80">Lv / 100</span>
+        </div>
+        <div class="w-full bg-white/30 rounded-full h-4 overflow-hidden mb-2">
+          <div id="levelBar" class="bg-white h-4 rounded-full transition-all duration-700 ease-out" style="width:0%"></div>
+        </div>
+        <div id="nextLevelInfo" class="text-sm opacity-90">--</div>
+      </div>
+
+      <!-- レーダーチャート -->
+      <div class="bg-white shadow-lg rounded-2xl p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">最新ステータス</h2>
+        <canvas id="radarChart"></canvas>
+        <div class="mt-4 text-center text-gray-500">
+          平均スコア: <span id="avgScore" class="text-lg font-bold text-indigo-600">--</span><br/>
+          <span id="lastDate" class="text-sm">--</span>
+        </div>
+      </div>
+
+      <!-- 推移チャート -->
+      <div class="bg-white shadow-lg rounded-2xl p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">スコア推移</h2>
+        <canvas id="lineChart"></canvas>
+      </div>
+    </div>
+
+    <!-- === 管理画面 === -->
+    <div id="manageView" class="hidden">
+      <div class="bg-white shadow-lg rounded-2xl p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">履歴管理</h2>
+        <div id="historyList" class="space-y-4"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const db = new PouchDB('self_status');
+
+    const radarCtx = document.getElementById('radarChart').getContext('2d');
+    const lineCtx = document.getElementById('lineChart').getContext('2d');
+    const avgScoreEl = document.getElementById('avgScore');
+    const lastDateEl = document.getElementById('lastDate');
+    const levelValueEl = document.getElementById('levelValue');
+    const levelBarEl = document.getElementById('levelBar');
+    const nextLevelInfoEl = document.getElementById('nextLevelInfo');
+    const historyList = document.getElementById('historyList');
+
+    // === タブ切替 ===
+    const mainView = document.getElementById('mainView');
+    const manageView = document.getElementById('manageView');
+    const tabMain = document.getElementById('tabMain');
+    const tabManage = document.getElementById('tabManage');
+    tabMain.addEventListener('click', ()=>{
+      mainView.classList.remove('hidden');
+      manageView.classList.add('hidden');
+      tabMain.classList.add('bg-indigo-600','text-white');
+      tabMain.classList.remove('bg-gray-200');
+      tabManage.classList.remove('bg-indigo-600','text-white');
+      tabManage.classList.add('bg-gray-200');
+    });
+    tabManage.addEventListener('click', ()=>{
+      manageView.classList.remove('hidden');
+      mainView.classList.add('hidden');
+      tabManage.classList.add('bg-indigo-600','text-white');
+      tabManage.classList.remove('bg-gray-200');
+      tabMain.classList.remove('bg-indigo-600','text-white');
+      tabMain.classList.add('bg-gray-200');
+      loadHistory();
+    });
+
+    // === スコア変換 ===
+    function toScore(raw){
+      return {
+        training: Math.min(100, raw.training || 0),
+        study: Math.min(100, (raw.study || 0) / 1000 * 100),
+        recovery: Math.max(0, 100 - Math.abs((raw.sleep || 0) - 7.5) * 20),
+        continuity: Math.min(100, raw.continuity || 0),
+        productivity: Math.max(0, 100 - (raw.productivity || 0) * 10),
+        mental: Math.min(100, raw.mental || 0)
+      };
+    }
+
+    function computeLevel(total){
+      return Math.min(100, Math.floor(total / 600 * 100));
+    }
+
+    function updateLevelDisplay(total){
+      const level = computeLevel(total);
+      levelValueEl.textContent = level;
+      levelBarEl.style.width = `${level}%`;
+      if(level >= 100){
+        nextLevelInfoEl.textContent = "MAX！おめでとう！🎉";
+      } else {
+        const nextTotal = (level + 1) / 100 * 600;
+        const diff = Math.ceil(nextTotal - total);
+        nextLevelInfoEl.textContent = `次のLvまで 平均+1 または 合計+${diff} 点`;
+      }
+    }
+
+    // === グラフ ===
+    const radarChart = new Chart(radarCtx, {
+      type: 'radar',
+      data: {
+        labels: ['筋力','知力','回復力','継続力','生産性','精神力'],
+        datasets: [{
+          label: 'ステータス',
+          data: [0,0,0,0,0,0],
+          backgroundColor: 'rgba(99,102,241,0.2)',
+          borderColor: 'rgba(99,102,241,1)',
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(139,92,246,1)'
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } },
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    const lineChart = new Chart(lineCtx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: '平均スコア推移',
+          data: [],
+          borderColor: 'rgba(16,185,129,1)',
+          backgroundColor: 'rgba(16,185,129,0.2)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { min: 0, max: 100 } }
+      }
+    });
+
+    // === フォーム送信 ===
+    document.getElementById('statusForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const data = {
+        _id: new Date().toISOString(),
+        training: parseFloat(document.getElementById('training').value) || 0,
+        study: parseFloat(document.getElementById('study').value) || 0,
+        sleep: parseFloat(document.getElementById('sleep').value) || 0,
+        continuity: parseFloat(document.getElementById('continuity').value) || 0,
+        productivity: parseFloat(document.getElementById('productivity').value) || 0,
+        mental: parseFloat(document.getElementById('mental').value) || 0,
+        ts: new Date()
+      };
+      await db.put(data);
+      loadData();
+    });
+
+    async function loadData(){
+      const result = await db.allDocs({ include_docs:true, descending:true, limit:30 });
+      const docs = result.rows.map(r=>r.doc).sort((a,b)=> new Date(a.ts)-new Date(b.ts));
+      if(docs.length === 0) return;
+
+      const latestRaw = docs[docs.length - 1];
+      const latest = toScore(latestRaw);
+      const scores = [latest.training, latest.study, latest.recovery, latest.continuity, latest.productivity, latest.mental];
+
+      radarChart.data.datasets[0].data = scores;
+      radarChart.update();
+
+      const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+      avgScoreEl.textContent = avg;
+      lastDateEl.textContent = new Date(latestRaw.ts).toLocaleString();
+
+      const total = scores.reduce((a,b)=>a+b,0);
+      updateLevelDisplay(total);
+
+      lineChart.data.labels = docs.map(d=> new Date(d.ts).toLocaleDateString());
+      lineChart.data.datasets[0].data = docs.map(d=>{
+        const s = toScore(d);
+        return Math.round((s.training+s.study+s.recovery+s.continuity+s.productivity+s.mental)/6);
+      });
+      lineChart.update();
+    }
+
+    // === 管理画面 ===
+    async function loadHistory(){
+      const result = await db.allDocs({ include_docs:true, descending:true });
+      historyList.innerHTML = '';
+      result.rows.forEach(r=>{
+        const d = r.doc;
+        const div = document.createElement('div');
+        div.className = "border rounded-lg p-4 flex justify-between items-center";
+        div.innerHTML = `
+          <div>
+            <div class="font-semibold">${new Date(d.ts).toLocaleString()}</div>
+            <div class="text-sm text-gray-600">筋力:${d.training} 知力:${d.study} 睡眠:${d.sleep} 継続:${d.continuity} 生産性:${d.productivity} 精神力:${d.mental}</div>
+          </div>
+          <div class="flex gap-2">
+            <button class="px-2 py-1 bg-yellow-400 text-white rounded editBtn">編集</button>
+            <button class="px-2 py-1 bg-red-500 text-white rounded deleteBtn">削除</button>
+          </div>
+        `;
+        div.querySelector('.deleteBtn').addEventListener('click', async ()=>{
+          await db.remove(d);
+          loadHistory();
+          loadData();
+        });
+        div.querySelector('.editBtn').addEventListener('click', async ()=>{
+          document.getElementById('training').value = d.training;
+          document.getElementById('study').value = d.study;
+          document.getElementById('sleep').value = d.sleep;
+          document.getElementById('continuity').value = d.continuity;
+          document.getElementById('productivity').value = d.productivity;
+          document.getElementById('mental').value = d.mental;
+          mainView.classList.remove('hidden');
+          manageView.classList.add('hidden');
+          tabMain.click();
+        });
+        historyList.appendChild(div);
+      });
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
