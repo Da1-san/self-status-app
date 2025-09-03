@@ -3,163 +3,133 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>セルフステータス管理 RPG版</title>
+  <title>セルフステータス管理 - 完全版</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.1/dist/pouchdb.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <style>
-    body { background: radial-gradient(circle at 30% 30%, #0d0d0d 0%, #1a1a2e 100%); font-family: 'Inter', sans-serif; }
-    .glassmorphism { background: rgba(15,15,30,0.6); border: 2px solid rgba(255,255,255,0.1); border-radius: 20px; box-shadow: 0 0 30px rgba(102,126,234,0.4);}
-    .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);} .card-hover:hover { transform: translateY(-4px); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);}
-    .stat-icon { width: 28px; height: 28px; background: linear-gradient(135deg,#fbbf24,#f59e0b); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:white; font-size:14px; font-weight:700; margin-right:8px; box-shadow:0 0 10px rgba(251,191,36,0.8);}
-    .floating-input { background: rgba(0,0,0,0.6); border:2px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; color:#fff; font-weight:bold; transition: all 0.3s ease;}
-    .floating-input:focus { border-color:#fbbf24; box-shadow:0 0 20px rgba(251,191,36,0.5); transform: scale(1.05); outline:none;}
-    .neo-button { background: linear-gradient(135deg,#f59e0b,#fbbf24); box-shadow:0 0 20px rgba(251,191,36,0.4); transition: all 0.3s ease; font-family: 'Press Start 2P', cursive;}
-    .neo-button:hover { transform: translateY(-3px); box-shadow:0 0 30px rgba(251,191,36,0.7),0 0 50px rgba(251,191,36,0.4);}
-    .tab-active { background: linear-gradient(135deg,#f59e0b,#fbbf24); color:#000; font-weight:bold; box-shadow:0 0 20px rgba(251,191,36,0.6);}
-    .tab-inactive { background: rgba(15,15,30,0.5); color:#aaa; border:1px solid rgba(255,255,255,0.1);}
-    .level-glow { background: radial-gradient(circle at top left, rgba(255,215,0,0.2), rgba(0,0,0,0.6)); border:2px solid rgba(255,215,0,0.5); box-shadow:0 0 40px rgba(255,215,0,0.5); border-radius:20px;}
-    #levelValue { font-family:'Press Start 2P',cursive; font-size:5rem; color:#fbbf24; text-shadow:0 0 20px #fbbf24,0 0 40px #f59e0b;}
-    #levelBar { background: linear-gradient(90deg,#fbbf24,#f59e0b,#fbbf24); box-shadow:0 0 20px rgba(251,191,36,0.6); height:12px; border-radius:12px; position:relative; overflow:hidden; transition: width 1s ease-out;}
-    canvas { background: rgba(0,0,0,0.5); border-radius:20px; padding:10px;}
-  </style>
 </head>
-<body class="min-h-screen">
-  <div class="relative z-10 max-w-6xl mx-auto p-4 md:p-8">
-    <div class="flex justify-center mb-6">
-      <button id="tabMain" class="px-4 py-2 rounded-l-xl tab-active">メイン</button>
-      <button id="tabManage" class="px-4 py-2 rounded-r-xl tab-inactive">履歴管理</button>
-    </div>
+<body>
+  <h1>セルフステータス管理</h1>
+  <form id="statusForm">
+    筋トレ時間(分): <input type="number" id="training" /><br>
+    勉強時間(分): <input type="number" id="study" /><br>
+    資産形成(万円): <input type="number" id="asset" /><br>
+    継続日数(日): <input type="number" id="continuity" /><br>
+    スクリーンタイム(分): <input type="number" id="productivity" /><br>
+    メンタル(1-100): <input type="number" id="mental" /><br>
+    <button type="submit">保存</button>
+  </form>
 
-    <div id="mainView">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="glassmorphism p-6 card-hover">
-          <h2 class="text-xl font-bold text-white mb-4">ステータス入力</h2>
-          <form id="statusForm" class="space-y-4">
-            <input id="training" type="number" placeholder="筋トレ時間(分)" class="floating-input w-full" required>
-            <input id="study" type="number" placeholder="学習時間(分)" class="floating-input w-full" required>
-            <input id="asset" type="number" placeholder="資産(万円)" class="floating-input w-full" required>
-            <input id="continuity" type="number" placeholder="継続力(%)" class="floating-input w-full" required>
-            <input id="productivity" type="number" placeholder="スクリーンタイム(時間)" class="floating-input w-full" required>
-            <input id="mental" type="number" placeholder="精神力(%)" class="floating-input w-full" required>
-            <button type="submit" class="neo-button text-black px-4 py-2 rounded-xl w-full">保存</button>
-          </form>
-        </div>
+  <h2>レベル: <span id="level">1</span></h2>
+  <canvas id="radarChart"></canvas>
+  <canvas id="barChart"></canvas>
 
-        <div class="glassmorphism p-6 card-hover level-glow">
-          <h2 class="text-xl font-bold text-white mb-4">レベル</h2>
-          <div id="levelValue">0</div>
-          <div class="w-full bg-gray-700 rounded-xl h-4 mt-4 overflow-hidden">
-            <div id="levelBar" style="width:0%"></div>
-          </div>
-          <p id="nextLevelInfo" class="text-white mt-2">次のレベルまであと 500 ポイント</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <div class="glassmorphism p-6 card-hover">
-          <canvas id="radarChart"></canvas>
-        </div>
-        <div class="glassmorphism p-6 card-hover">
-          <canvas id="lineChart"></canvas>
-        </div>
-      </div>
-
-      <div class="glassmorphism p-6 card-hover mt-6">
-        <h2 class="text-xl font-bold text-white mb-2">最新情報</h2>
-        <p class="text-white">平均スコア: <span id="avgScore">0</span></p>
-        <p class="text-white">最終入力日: <span id="lastDate">-</span></p>
-      </div>
-    </div>
-
-    <div id="manageView" class="hidden">
-      <div class="glassmorphism p-6 card-hover">
-        <h2 class="text-xl font-bold text-white mb-4">履歴</h2>
-        <div id="historyList" class="space-y-2"></div>
-      </div>
-    </div>
-  </div>
+  <h2>履歴</h2>
+  <ul id="history"></ul>
 
   <script>
-    const db = new PouchDB('self_status');
-    const radarCtx = document.getElementById('radarChart').getContext('2d');
-    const lineCtx = document.getElementById('lineChart').getContext('2d');
-    const avgScoreEl = document.getElementById('avgScore');
-    const lastDateEl = document.getElementById('lastDate');
-    const levelValueEl = document.getElementById('levelValue');
-    const levelBarEl = document.getElementById('levelBar');
-    const nextLevelInfoEl = document.getElementById('nextLevelInfo');
-    const historyList = document.getElementById('historyList');
-    const mainView = document.getElementById('mainView');
-    const manageView = document.getElementById('manageView');
-    const tabMain = document.getElementById('tabMain');
-    const tabManage = document.getElementById('tabManage');
+    const db = new PouchDB('statusdb');
+    let radarChart, barChart;
 
-    tabMain.addEventListener('click',()=>{mainView.classList.remove('hidden');manageView.classList.add('hidden');tabMain.classList.add('tab-active');tabMain.classList.remove('tab-inactive');tabManage.classList.remove('tab-active');tabManage.classList.add('tab-inactive');});
-    tabManage.addEventListener('click',()=>{manageView.classList.remove('hidden');mainView.classList.add('hidden');tabManage.classList.add('tab-active');tabManage.classList.remove('tab-inactive');tabMain.classList.remove('tab-active');tabMain.classList.add('tab-inactive');});
-
-    let radarChart = new Chart(radarCtx,{type:'radar',data:{labels:['筋力','知力','資産力','継続力','生産性','精神力'],datasets:[{label:'最新ステータス',data:[0,0,0,0,0,0],backgroundColor:'rgba(251,191,36,0.2)',borderColor:'#fbbf24',borderWidth:2,pointBackgroundColor:'#f59e0b'}]},options:{responsive:true,scales:{r:{min:0,max:100,angleLines:{color:'#444'},grid:{color:'#333'},pointLabels:{color:'#fff'}}},plugins:{legend:{labels:{color:'#fff'}}}}});
-    let lineChart = new Chart(lineCtx,{type:'line',data:{labels:[],datasets:[{label:'総合スコア',data:[],borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.2)',fill:true,tension:0.4}]},options:{responsive:true,scales:{x:{ticks:{color:'#fff'}},y:{ticks:{color:'#fff',beginAtZero:true,max:500}}}}});
-
-    function convertStudy(hours){ return Math.min(100, Math.floor(hours / 10)); }
-    function convertAsset(millionYen){ return Math.min(100, Math.floor(millionYen / 10)); }
-    function convertProductivity(screenTime){ return Math.max(0, Math.min(100, 100 - (screenTime * 10))); }
-
-    function updateCharts(latest){
-      radarChart.data.datasets[0].data = [latest.training,latest.study,latest.asset,latest.continuity,latest.productivity,latest.mental];
-      radarChart.update();
-      db.allDocs({include_docs:true}).then(res=>{
-        let labels=[],data=[];
-        res.rows.forEach(r=>{labels.push(new Date(r.doc.date).toLocaleDateString());data.push(r.doc.total);});
-        lineChart.data.labels=labels;lineChart.data.datasets[0].data=data;lineChart.update();
-      });
-      avgScoreEl.textContent = (latest.total/5).toFixed(1);
-      lastDateEl.textContent = new Date(latest.date).toLocaleString();
+    function convertTraining(v){return Math.min(100, Math.round(v/120*100));}
+    function convertStudy(v){return Math.min(100, Math.round(v/300*100));}
+    function convertAsset(v){return Math.min(100, Math.round(v/100*100));}
+    function convertContinuity(v){return Math.min(100, Math.round(v/365*100));}
+    function convertProductivity(v){
+      let score = 100 - Math.round(v/600*100);
+      return Math.max(0, Math.min(100, score));
     }
 
-    function calcLevel(total){return Math.floor(Math.sqrt(total));}
-    function updateLevel(total){
-      let level = calcLevel(total);
-      levelValueEl.textContent = level;
-      let percent = Math.min(100,(total/500)*100);
-      levelBarEl.style.width=percent+'%';
-      nextLevelInfoEl.textContent = `次のレベルまであと ${Math.max(0,500-total)} ポイント`;
-    }
-
-    function refreshHistory(){
-      db.allDocs({include_docs:true}).then(res=>{
-        historyList.innerHTML='';
-        res.rows.reverse().forEach(r=>{
-          const d = r.doc;
-          const div=document.createElement('div');
-          div.className='bg-gray-800 text-white p-4 rounded-xl';
-          div.innerHTML = `
-            <div class="font-bold">${new Date(d.date).toLocaleString()} - 総合: ${d.total}</div>
-            <div class="text-sm text-gray-300">筋力: ${d.training} | 知力: ${d.study} (入力:${d.raw.study}h) | 資産力: ${d.asset} (入力:${d.raw.asset}万円) | 継続力: ${d.continuity} | 生産性: ${d.productivity} (入力:${d.raw.productivity}h) | 精神力: ${d.mental}</div>
-          `;
-          historyList.appendChild(div);
-        });
-      });
-    }
-
-    document.getElementById('statusForm').addEventListener('submit',e=>{
+    document.getElementById('statusForm').addEventListener('submit',async(e)=>{
       e.preventDefault();
-      let training=Math.min(100,parseInt(document.getElementById('training').value)||0);
-      let studyInput=parseInt(document.getElementById('study').value)||0;
-      let assetInput=parseInt(document.getElementById('asset').value)||0;
-      let continuity=Math.min(100,parseInt(document.getElementById('continuity').value)||0);
-      let productivityInput=parseInt(document.getElementById('productivity').value)||0;
-      let mental=Math.min(100,parseInt(document.getElementById('mental').value)||0);
+      let training = convertTraining(+document.getElementById('training').value||0);
+      let studyInput = +document.getElementById('study').value||0;
+      let assetInput = +document.getElementById('asset').value||0;
+      let continuity = convertContinuity(+document.getElementById('continuity').value||0);
+      let productivityInput = +document.getElementById('productivity').value||0;
+      let mental = +document.getElementById('mental').value||0;
 
-      let study=convertStudy(studyInput);
-      let asset=convertAsset(assetInput);
-      let productivity=convertProductivity(productivityInput);
+      let study = convertStudy(studyInput);
+      let asset = convertAsset(assetInput);
+      let productivity = convertProductivity(productivityInput);
 
-      let total = training+study+asset+continuity+mental;
-      const doc={_id:new Date().toISOString(),date:new Date().toISOString(),training,study,asset,continuity,productivity,mental,total,raw:{study:studyInput, asset:assetInput, productivity:productivityInput}};
-      db.put(doc).then(()=>{updateCharts(doc);updateLevel(total);refreshHistory(); localStorage.setItem('lastInputs', JSON.stringify({training, studyInput, assetInput, continuity, productivityInput, mental}));});
+      // 合計は生産性を除外（最大500点）
+      let total = training + study + asset + continuity + mental;
+
+      let doc = {
+        _id:new Date().toISOString(),
+        training, study, asset, continuity, productivity, mental,
+        trainingInput:+document.getElementById('training').value||0,
+        studyInput, assetInput, continuityInput:+document.getElementById('continuity').value||0,
+        productivityInput, mentalInput:mental,
+        total
+      };
+      await db.put(doc);
+      updateCharts(doc);
+      updateLevel(total);
+      refreshHistory();
+
+      localStorage.setItem('lastInputs', JSON.stringify({
+        training:document.getElementById('training').value,
+        studyInput, assetInput,
+        continuity:document.getElementById('continuity').value,
+        productivityInput,
+        mental
+      }));
     });
+
+    function updateCharts(doc){
+      let ctxRadar=document.getElementById('radarChart').getContext('2d');
+      if(radarChart){radarChart.destroy();}
+      radarChart=new Chart(ctxRadar,{
+        type:'radar',
+        data:{
+          labels:['筋力','知力','資産力','継続力','生産性','精神力'],
+          datasets:[{
+            label:'ステータス',
+            data:[doc.training,doc.study,doc.asset,doc.continuity,doc.productivity,doc.mental],
+            fill:true,
+            backgroundColor:'rgba(54,162,235,0.2)',
+            borderColor:'rgb(54,162,235)'
+          }]
+        },
+        options:{scales:{r:{min:0,max:100}}}
+      });
+
+      let ctxBar=document.getElementById('barChart').getContext('2d');
+      if(barChart){barChart.destroy();}
+      barChart=new Chart(ctxBar,{
+        type:'bar',
+        data:{
+          labels:['筋力','知力','資産力','継続力','生産性','精神力'],
+          datasets:[{
+            label:'ステータス',
+            data:[doc.training,doc.study,doc.asset,doc.continuity,doc.productivity,doc.mental],
+            backgroundColor:'rgba(255,99,132,0.5)'
+          }]
+        },
+        options:{scales:{y:{min:0,max:100}}}
+      });
+    }
+
+    function updateLevel(total){
+      // レベルは最大100まで。逓減成長（上がりにくくする）
+      let level = Math.floor(Math.sqrt(total) * 4.47);
+      if (level > 100) level = 100;
+      if (level < 1) level = 1;
+      document.getElementById('level').textContent = level;
+    }
+
+    async function refreshHistory(){
+      let ul=document.getElementById('history');
+      ul.innerHTML='';
+      let res=await db.allDocs({include_docs:true,descending:true});
+      res.rows.forEach(r=>{
+        let d=r.doc;
+        let li=document.createElement('li');
+        li.textContent=`${d._id} 総合:${d.total} 筋力:${d.training}(${d.trainingInput}分) 知力:${d.study}(${d.studyInput}分) 資産力:${d.asset}(${d.assetInput}万円) 継続力:${d.continuity}(${d.continuityInput}日) 生産性:${d.productivity}(${d.productivityInput}分) 精神力:${d.mental}`;
+        ul.appendChild(li);
+      });
+    }
 
     window.addEventListener('load',()=>{
       refreshHistory();
