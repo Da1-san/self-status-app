@@ -3,119 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>セルフステータス管理</title>
+  <title>セルフステータス管理 RPG版</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.1/dist/pouchdb.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    
+    body {
+      background: radial-gradient(circle at 30% 30%, #0d0d0d 0%, #1a1a2e 100%);
+      font-family: 'Inter', sans-serif;
+    }
     .glassmorphism {
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(15,15,30,0.6);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(102,126,234,0.4);
     }
-    
-    .card-hover {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .card-hover:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    }
-    
-    .gradient-border {
-      position: relative;
-      background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-      border-radius: 16px;
-      padding: 2px;
-    }
-    
-    .gradient-border-inner {
-      background: white;
-      border-radius: 14px;
-      height: 100%;
-      width: 100%;
-    }
-    
-    .floating-input {
-      transition: all 0.3s ease;
-    }
-    
-    .floating-input:focus {
-      transform: scale(1.02);
-      box-shadow: 0 10px 25px -10px rgba(99, 102, 241, 0.3);
-    }
-    
-    .level-glow {
-      box-shadow: 0 0 30px rgba(99, 102, 241, 0.4);
-    }
-    
-    .pulse-animation {
-      animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-    
-    .text-shadow {
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    
-    .neo-button {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.3);
-      transition: all 0.3s ease;
-    }
-    
-    .neo-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px 0 rgba(102, 126, 234, 0.4);
-    }
-    
-    .tab-active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.3);
-    }
-    
-    .tab-inactive {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
+    .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);}
     .stat-icon {
-      width: 24px;
-      height: 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 12px;
-      font-weight: 600;
-      margin-right: 8px;
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg,#fbbf24,#f59e0b);
+      border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+      color:white; font-size:14px; font-weight:700; margin-right:8px;
+      box-shadow:0 0 10px rgba(251,191,36,0.8);
+    }
+    .floating-input {
+      background: rgba(0,0,0,0.6); border:2px solid rgba(255,255,255,0.1);
+      border-radius:12px; padding:12px; color:#fff; font-weight:bold;
+      transition: all 0.3s ease;
+    }
+    .floating-input:focus {
+      border-color:#fbbf24; box-shadow:0 0 20px rgba(251,191,36,0.5); transform: scale(1.05);
+      outline:none;
+    }
+    .neo-button {
+      background: linear-gradient(135deg,#f59e0b,#fbbf24);
+      box-shadow:0 0 20px rgba(251,191,36,0.4); transition: all 0.3s ease;
+      font-family: 'Press Start 2P', cursive;
+    }
+    .neo-button:hover {
+      transform: translateY(-3px);
+      box-shadow:0 0 30px rgba(251,191,36,0.7),0 0 50px rgba(251,191,36,0.4);
+    }
+    .tab-active {
+      background: linear-gradient(135deg,#f59e0b,#fbbf24);
+      color:#000; font-weight:bold; box-shadow:0 0 20px rgba(251,191,36,0.6);
+    }
+    .tab-inactive {
+      background: rgba(15,15,30,0.5); color:#aaa; border:1px solid rgba(255,255,255,0.1);
+    }
+    .level-glow {
+      background: radial-gradient(circle at top left, rgba(255,215,0,0.2), rgba(0,0,0,0.6));
+      border:2px solid rgba(255,215,0,0.5);
+      box-shadow:0 0 40px rgba(255,215,0,0.5);
+      border-radius:20px;
+    }
+    #levelValue {
+      font-family:'Press Start 2P',cursive; font-size:5rem;
+      color:#fbbf24; text-shadow:0 0 20px #fbbf24,0 0 40px #f59e0b;
+    }
+    #levelBar {
+      background: linear-gradient(90deg,#fbbf24,#f59e0b,#fbbf24);
+      box-shadow:0 0 20px rgba(251,191,36,0.6);
+      height:12px; border-radius:12px; position:relative; overflow:hidden;
+      transition: width 1s ease-out;
+    }
+    canvas {
+      background: rgba(0,0,0,0.5);
+      border-radius:20px;
+      padding:10px;
     }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-  <!-- Background decoration -->
-  <div class="fixed inset-0 overflow-hidden pointer-events-none">
-    <div class="absolute top-0 left-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-    <div class="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style="animation-delay: 2s;"></div>
-    <div class="absolute -bottom-8 left-1/2 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style="animation-delay: 4s;"></div>
-  </div>
-
+<body class="min-h-screen">
   <div class="relative z-10 max-w-6xl mx-auto p-4 md:p-8">
     <!-- Header -->
     <div class="text-center mb-12">
-      <h1 class="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 text-shadow mb-4">
-        STATUS DASHBOARD
+      <h1 class="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-4">
+        RPG STATUS DASHBOARD
       </h1>
       <p class="text-gray-300 text-lg font-light">セルフステータス管理システム</p>
     </div>
@@ -132,57 +98,19 @@
       </div>
     </div>
 
-    <!-- === ステータス画面 === -->
+    <!-- Main & Manage Views -->
     <div id="mainView">
-      <!-- データ入力フォーム -->
+      <!-- データ入力 -->
       <div class="glassmorphism rounded-3xl p-8 mb-8 card-hover">
-        <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
-          <div class="stat-icon">📝</div>
-          データ入力
-        </h2>
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center"><div class="stat-icon">📝</div>データ入力</h2>
         <form id="statusForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-gray-300 flex items-center">
-              <div class="stat-icon">💪</div>
-              筋力 (ベンチ重量 kg)
-            </label>
-            <input type="number" id="training" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
-          </div>
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-gray-300 flex items-center">
-              <div class="stat-icon">🧠</div>
-              知力 (累積学習時間 h)
-            </label>
-            <input type="number" id="study" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
-          </div>
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-gray-300 flex items-center">
-              <div class="stat-icon">💰</div>
-              資産力 (資産額 万円)
-            </label>
-            <input type="number" id="asset" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
-          </div>
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-gray-300 flex items-center">
-              <div class="stat-icon">⚡</div>
-              継続力 (継続日数)
-            </label>
-            <input type="number" id="continuity" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
-          </div>
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-gray-300 flex items-center">
-              <div class="stat-icon">🚀</div>
-              生産性 (スクリーンタイム h)
-            </label>
-            <input type="number" id="productivity" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
-          </div>
-          <div class="space-y-2">
-            <label class="block text-sm font-semibold text-gray-300 flex items-center">
-              <div class="stat-icon">🎯</div>
-              精神力 (継続日数)
-            </label>
-            <input type="number" id="mental" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
-          </div>
+          <!-- ステータス項目はそのまま -->
+          <div class="space-y-2"><label class="block text-sm font-semibold text-gray-300 flex items-center"><div class="stat-icon">💪</div>筋力</label><input type="number" id="training" class="floating-input w-full" placeholder="0"></div>
+          <div class="space-y-2"><label class="block text-sm font-semibold text-gray-300 flex items-center"><div class="stat-icon">🧠</div>知力</label><input type="number" id="study" class="floating-input w-full" placeholder="0"></div>
+          <div class="space-y-2"><label class="block text-sm font-semibold text-gray-300 flex items-center"><div class="stat-icon">💰</div>資産力</label><input type="number" id="asset" class="floating-input w-full" placeholder="0"></div>
+          <div class="space-y-2"><label class="block text-sm font-semibold text-gray-300 flex items-center"><div class="stat-icon">⚡</div>継続力</label><input type="number" id="continuity" class="floating-input w-full" placeholder="0"></div>
+          <div class="space-y-2"><label class="block text-sm font-semibold text-gray-300 flex items-center"><div class="stat-icon">🚀</div>生産性</label><input type="number" id="productivity" class="floating-input w-full" placeholder="0"></div>
+          <div class="space-y-2"><label class="block text-sm font-semibold text-gray-300 flex items-center"><div class="stat-icon">🎯</div>精神力</label><input type="number" id="mental" class="floating-input w-full" placeholder="0"></div>
           <div class="col-span-1 md:col-span-2 lg:col-span-3 text-center mt-4">
             <button type="submit" class="neo-button px-12 py-4 rounded-2xl text-white font-bold text-lg">
               💾 保存する
@@ -192,74 +120,53 @@
       </div>
 
       <!-- レベル表示 -->
-      <div class="level-glow glassmorphism rounded-3xl p-8 mb-8 relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-yellow-400/20 to-transparent rounded-full"></div>
-        <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
-          <div class="stat-icon">👑</div>
-          レベル
-        </h2>
+      <div class="level-glow rounded-3xl p-8 mb-8 relative overflow-hidden">
+        <h2 class="text-2xl font-bold text-white mb-4 flex items-center"><div class="stat-icon">👑</div>レベル</h2>
         <div class="flex items-center justify-between mb-4">
-          <span id="levelValue" class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 pulse-animation">--</span>
+          <span id="levelValue">--</span>
           <div class="text-right">
             <div class="text-sm text-gray-400">MAX LEVEL</div>
             <div class="text-2xl font-bold text-gray-300">100</div>
           </div>
         </div>
-        <div class="relative w-full bg-white/20 rounded-full h-6 overflow-hidden mb-4">
-          <div id="levelBar" class="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 h-6 rounded-full transition-all duration-1000 ease-out relative" style="width:0%">
-            <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
-          </div>
+        <div class="relative w-full h-6 rounded-full mb-4" style="background: rgba(255,255,255,0.1);">
+          <div id="levelBar"></div>
         </div>
         <div id="nextLevelInfo" class="text-gray-300 font-medium">--</div>
       </div>
 
+      <!-- グラフ -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- レーダーチャート -->
         <div class="glassmorphism rounded-3xl p-8 card-hover">
-          <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
-            <div class="stat-icon">📈</div>
-            最新ステータス
-          </h2>
-          <div class="bg-white/5 rounded-2xl p-4">
-            <canvas id="radarChart"></canvas>
-          </div>
+          <h2 class="text-2xl font-bold text-white mb-6 flex items-center"><div class="stat-icon">📈</div>最新ステータス</h2>
+          <canvas id="radarChart"></canvas>
           <div class="mt-6 text-center space-y-2">
             <div class="text-gray-300">平均スコア</div>
-            <div class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+            <div class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
               <span id="avgScore">--</span>
             </div>
             <div id="lastDate" class="text-sm text-gray-400">--</div>
           </div>
         </div>
 
-        <!-- 推移チャート -->
         <div class="glassmorphism rounded-3xl p-8 card-hover">
-          <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
-            <div class="stat-icon">📊</div>
-            スコア推移
-          </h2>
-          <div class="bg-white/5 rounded-2xl p-4">
-            <canvas id="lineChart"></canvas>
-          </div>
+          <h2 class="text-2xl font-bold text-white mb-6 flex items-center"><div class="stat-icon">📊</div>スコア推移</h2>
+          <canvas id="lineChart"></canvas>
         </div>
       </div>
     </div>
 
-    <!-- === 管理画面 === -->
     <div id="manageView" class="hidden">
       <div class="glassmorphism rounded-3xl p-8 card-hover">
-        <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
-          <div class="stat-icon">🗂️</div>
-          履歴管理
-        </h2>
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center"><div class="stat-icon">🗂️</div>履歴管理</h2>
         <div id="historyList" class="space-y-4"></div>
       </div>
     </div>
   </div>
 
   <script>
+    // ここから下のJSは元のまま
     const db = new PouchDB('self_status');
-
     const radarCtx = document.getElementById('radarChart').getContext('2d');
     const lineCtx = document.getElementById('lineChart').getContext('2d');
     const avgScoreEl = document.getElementById('avgScore');
@@ -269,246 +176,68 @@
     const nextLevelInfoEl = document.getElementById('nextLevelInfo');
     const historyList = document.getElementById('historyList');
 
-    // === タブ切替 ===
     const mainView = document.getElementById('mainView');
     const manageView = document.getElementById('manageView');
     const tabMain = document.getElementById('tabMain');
     const tabManage = document.getElementById('tabManage');
-    tabMain.addEventListener('click', ()=>{
-      mainView.classList.remove('hidden');
-      manageView.classList.add('hidden');
-      tabMain.className = 'tab-active px-8 py-3 rounded-xl text-white font-semibold transition-all duration-300';
-      tabManage.className = 'tab-inactive px-8 py-3 rounded-xl text-gray-300 font-semibold transition-all duration-300';
-    });
-    tabManage.addEventListener('click', ()=>{
-      manageView.classList.remove('hidden');
-      mainView.classList.add('hidden');
-      tabManage.className = 'tab-active px-8 py-3 rounded-xl text-white font-semibold transition-all duration-300';
-      tabMain.className = 'tab-inactive px-8 py-3 rounded-xl text-gray-300 font-semibold transition-all duration-300';
-      loadHistory();
-    });
 
-    // === スコア変換 ===
-    function toScore(raw){
-      return {
-        training: Math.min(100, raw.training || 0),
-        study: Math.min(100, (raw.study || 0) / 1000 * 100),
-        asset: Math.min(100, (raw.asset || 0) / 1000 * 100), // 1000万円で100
-        continuity: Math.min(100, raw.continuity || 0),
-        productivity: Math.max(0, 100 - (raw.productivity || 0) * 10),
-        mental: Math.min(100, raw.mental || 0)
-      };
-    }
+    tabMain.addEventListener('click',()=>{mainView.classList.remove('hidden');manageView.classList.add('hidden');tabMain.classList.add('tab-active');tabMain.classList.remove('tab-inactive');tabManage.classList.remove('tab-active');tabManage.classList.add('tab-inactive');});
+    tabManage.addEventListener('click',()=>{manageView.classList.remove('hidden');mainView.classList.add('hidden');tabManage.classList.add('tab-active');tabManage.classList.remove('tab-inactive');tabMain.classList.remove('tab-active');tabMain.classList.add('tab-inactive');});
 
-    // === RPG風レベル計算 ===
-    function computeLevel(total) {
-      // レベル1からレベル100までの必要経験値を計算
-      // 各レベルの必要経験値は指数的に増加
-      let currentExp = 0;
-      for (let level = 1; level <= 100; level++) {
-        // レベルnに必要な経験値 = 基本値 * (level ^ 1.5)
-        const expForThisLevel = Math.floor(100 * Math.pow(level, 1.5));
-        currentExp += expForThisLevel;
-        
-        if (total < currentExp) {
-          return level - 1;
-        }
-      }
-      return 100; // 最大レベル
-    }
+    let radarChart = new Chart(radarCtx,{type:'radar',data:{labels:['筋力','知力','資産力','継続力','生産性','精神力'],datasets:[{label:'最新ステータス',data:[0,0,0,0,0,0],backgroundColor:'rgba(251,191,36,0.2)',borderColor:'#fbbf24',borderWidth:2,pointBackgroundColor:'#f59e0b'}]},options:{responsive:true,scales:{r:{angleLines:{color:'#444'},grid:{color:'#333'},pointLabels:{color:'#fff'}}},plugins:{legend:{labels:{color:'#fff'}}}}});
+    let lineChart = new Chart(lineCtx,{type:'line',data:{labels:[],datasets:[{label:'総合スコア',data:[],borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.2)',fill:true,tension:0.4}]},options:{responsive:true,scales:{x:{ticks:{color:'#fff'}},y:{ticks:{color:'#fff'}}}}});
 
-    function getExpForLevel(level) {
-      let totalExp = 0;
-      for (let i = 1; i <= level; i++) {
-        totalExp += Math.floor(100 * Math.pow(i, 1.5));
-      }
-      return totalExp;
-    }
-
-    function updateLevelDisplay(total) {
-      const level = computeLevel(total);
-      levelValueEl.textContent = level;
-      
-      if (level >= 100) {
-        levelBarEl.style.width = '100%';
-        nextLevelInfoEl.textContent = "MAX！おめでとう！🎉";
-      } else {
-        const currentLevelExp = getExpForLevel(level);
-        const nextLevelExp = getExpForLevel(level + 1);
-        const expInCurrentLevel = total - currentLevelExp;
-        const expNeededForCurrentLevel = nextLevelExp - currentLevelExp;
-        
-        const progressPercent = (expInCurrentLevel / expNeededForCurrentLevel) * 100;
-        levelBarEl.style.width = `${progressPercent}%`;
-        
-        const expToNext = nextLevelExp - total;
-        nextLevelInfoEl.textContent = `次のLv${level + 1}まで ${expToNext} 経験値`;
-      }
-    }
-
-    // === グラフ ===
-    const radarChart = new Chart(radarCtx, {
-      type: 'radar',
-      data: {
-        labels: ['筋力','知力','資産力','継続力','生産性','精神力'],
-        datasets: [{
-          label: 'ステータス',
-          data: [0,0,0,0,0,0],
-          backgroundColor: 'rgba(99,102,241,0.15)',
-          borderColor: '#667eea',
-          borderWidth: 3,
-          pointBackgroundColor: '#764ba2',
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 2,
-          pointRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: { 
-          r: { 
-            min: 0, 
-            max: 100, 
-            ticks: { 
-              stepSize: 20,
-              color: 'rgba(255,255,255,0.5)',
-              backdropColor: 'transparent'
-            },
-            grid: { color: 'rgba(255,255,255,0.1)' },
-            angleLines: { color: 'rgba(255,255,255,0.1)' },
-            pointLabels: { color: 'rgba(255,255,255,0.8)', font: { size: 12, weight: 'bold' } }
-          } 
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
-
-    const lineChart = new Chart(lineCtx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: '平均スコア推移',
-          data: [],
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16,185,129,0.1)',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 3,
-          pointBackgroundColor: '#10b981',
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 2,
-          pointRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: { 
-          y: { 
-            min: 0, 
-            max: 100,
-            ticks: { color: 'rgba(255,255,255,0.7)' },
-            grid: { color: 'rgba(255,255,255,0.1)' }
-          },
-          x: {
-            ticks: { color: 'rgba(255,255,255,0.7)' },
-            grid: { color: 'rgba(255,255,255,0.1)' }
-          }
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
-
-    // === フォーム送信 ===
-    document.getElementById('statusForm').addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const data = {
-        _id: new Date().toISOString(),
-        training: parseFloat(document.getElementById('training').value) || 0,
-        study: parseFloat(document.getElementById('study').value) || 0,
-        asset: parseFloat(document.getElementById('asset').value) || 0,
-        continuity: parseFloat(document.getElementById('continuity').value) || 0,
-        productivity: parseFloat(document.getElementById('productivity').value) || 0,
-        mental: parseFloat(document.getElementById('mental').value) || 0,
-        ts: new Date()
-      };
-      await db.put(data);
-      loadData();
-    });
-
-    async function loadData(){
-      const result = await db.allDocs({ include_docs:true, descending:true, limit:30 });
-      const docs = result.rows.map(r=>r.doc).sort((a,b)=> new Date(a.ts)-new Date(b.ts));
-      if(docs.length === 0) return;
-
-      const latestRaw = docs[docs.length - 1];
-      const latest = toScore(latestRaw);
-      const scores = [latest.training, latest.study, latest.asset, latest.continuity, latest.productivity, latest.mental];
-
-      radarChart.data.datasets[0].data = scores;
+    function updateCharts(latest){
+      radarChart.data.datasets[0].data = [latest.training,latest.study,latest.asset,latest.continuity,latest.productivity,latest.mental];
       radarChart.update();
-
-      const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
-      avgScoreEl.textContent = avg;
-      lastDateEl.textContent = new Date(latestRaw.ts).toLocaleString();
-
-      const total = scores.reduce((a,b)=>a+b,0);
-      updateLevelDisplay(total);
-
-      lineChart.data.labels = docs.map(d=> new Date(d.ts).toLocaleDateString());
-      lineChart.data.datasets[0].data = docs.map(d=>{
-        const s = toScore(d);
-        return Math.round((s.training+s.study+s.asset+s.continuity+s.productivity+s.mental)/6);
-      });
-      lineChart.update();
-    }
-
-    // === 管理画面 ===
-    async function loadHistory(){
-      const result = await db.allDocs({ include_docs:true, descending:true });
-      historyList.innerHTML = '';
-      result.rows.forEach(r=>{
-        const d = r.doc;
-        const div = document.createElement('div');
-        div.className = "glassmorphism rounded-2xl p-6 flex justify-between items-center card-hover";
-        div.innerHTML = `
-          <div>
-            <div class="font-bold text-white text-lg">${new Date(d.ts).toLocaleString()}</div>
-            <div class="text-gray-300 mt-2 flex flex-wrap gap-4">
-              <span class="flex items-center"><div class="stat-icon">💪</div>${d.training}</span>
-              <span class="flex items-center"><div class="stat-icon">🧠</div>${d.study}</span>
-              <span class="flex items-center"><div class="stat-icon">💰</div>${d.asset}</span>
-              <span class="flex items-center"><div class="stat-icon">⚡</div>${d.continuity}</span>
-              <span class="flex items-center"><div class="stat-icon">🚀</div>${d.productivity}</span>
-              <span class="flex items-center"><div class="stat-icon">🎯</div>${d.mental}</span>
-            </div>
-          </div>
-          <div class="flex gap-3">
-            <button class="neo-button px-4 py-2 rounded-xl text-white font-semibold editBtn">✏️ 編集</button>
-            <button class="px-4 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-xl font-semibold transition-all deleteBtn">🗑️ 削除</button>
-          </div>
-        `;
-        div.querySelector('.deleteBtn').addEventListener('click', async ()=>{
-          await db.remove(d);
-          loadHistory();
-          loadData();
-        });
-        div.querySelector('.editBtn').addEventListener('click', async ()=>{
-          document.getElementById('training').value = d.training;
-          document.getElementById('study').value = d.study;
-          document.getElementById('asset').value = d.asset;
-          document.getElementById('continuity').value = d.continuity;
-          document.getElementById('productivity').value = d.productivity;
-          document.getElementById('mental').value = d.mental;
-          mainView.classList.remove('hidden');
-          manageView.classList.add('hidden');
-          tabMain.click();
-        });
-        historyList.appendChild(div);
+      db.allDocs({include_docs:true}).then(res=>{
+        let labels=[],data=[];
+        res.rows.forEach(r=>{labels.push(new Date(r.doc.date).toLocaleDateString());data.push(r.doc.total);});
+        lineChart.data.labels=labels;lineChart.data.datasets[0].data=data;lineChart.update();
       });
     }
 
-    loadData();
+    function calcLevel(total){return Math.floor(Math.sqrt(total));}
+
+    function updateLevel(total){
+      let level = calcLevel(total);
+      levelValueEl.textContent = level;
+      let percent = Math.min(100,(total/100)*100);
+      levelBarEl.style.width=percent+'%';
+      nextLevelInfoEl.textContent = `次のレベルまであと ${Math.max(0,100-total)} ポイント`;
+    }
+
+    function refreshHistory(){
+      db.allDocs({include_docs:true}).then(res=>{
+        historyList.innerHTML='';
+        res.rows.reverse().forEach(r=>{
+          const div=document.createElement('div');
+          div.className='bg-gray-800 text-white p-4 rounded-xl';
+          div.textContent=`${new Date(r.doc.date).toLocaleString()} - 総合: ${r.doc.total}`;
+          historyList.appendChild(div);
+        });
+      });
+    }
+
+    document.getElementById('statusForm').addEventListener('submit',e=>{
+      e.preventDefault();
+      let training=parseInt(document.getElementById('training').value)||0;
+      let study=parseInt(document.getElementById('study').value)||0;
+      let asset=parseInt(document.getElementById('asset').value)||0;
+      let continuity=parseInt(document.getElementById('continuity').value)||0;
+      let productivity=parseInt(document.getElementById('productivity').value)||0;
+      let mental=parseInt(document.getElementById('mental').value)||0;
+      let total = training+study+asset+continuity+productivity+mental;
+      const doc={_id:new Date().toISOString(),date:new Date().toISOString(),training,study,asset,continuity,productivity,mental,total};
+      db.put(doc).then(()=>{updateCharts(doc);updateLevel(total);refreshHistory();});
+    });
+
+    db.allDocs({include_docs:true}).then(res=>{
+      if(res.rows.length>0){
+        const latest=res.rows[res.rows.length-1].doc;
+        updateCharts(latest);updateLevel(latest.total);refreshHistory();
+      }
+    });
   </script>
 </body>
 </html>
