@@ -4,169 +4,369 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>習慣ダッシュボード</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background: linear-gradient(180deg,#f7fafc,#ffffff); }
+    .card { background: white; border-radius: 12px; box-shadow: 0 6px 20px rgba(11,15,30,0.06); padding: 16px; }
+    .progress-bar { height: 24px; border-radius: 12px; overflow: hidden; background: #e5e7eb; }
+    .progress-bar-inner { height: 100%; text-align: center; color: white; font-weight: bold; line-height: 24px; transition: width 0.5s; }
+  </style>
 </head>
-<body class="bg-gray-100 p-6">
+<body class="min-h-screen flex items-start justify-center py-8">
+  <div class="w-full max-w-3xl px-4">
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold">習慣ダッシュボード</h1>
+      <p class="text-sm text-gray-500 mt-1">スマホ対応・クラウドに保存すると即反映</p>
+    </header>
 
-  <div class="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-md">
-    <h1 class="text-2xl font-bold mb-4">習慣ダッシュボード</h1>
+    <!-- ダッシュボード -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="card md:col-span-2">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs text-gray-500">最新スコア（平均）</div>
+            <div id="avgScore" class="text-3xl font-bold mt-1">--</div>
+            <div id="lastDate" class="text-xs text-gray-400 mt-1">--</div>
+            <div class="mt-3 text-xs text-gray-500">レベル</div>
+            <div class="progress-bar mt-1">
+              <div id="levelBar" class="progress-bar-inner bg-blue-600 w-0">Lv -- 0%</div>
+            </div>
+          </div>
+          <div class="w-44">
+            <canvas id="radarChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="text-sm text-gray-500">操作</div>
+        <div class="mt-3">
+          <button id="btnRefresh" class="w-full py-2 rounded bg-gray-900 text-white">手動更新</button>
+        </div>
+        <div class="mt-3 text-xs text-gray-400">（自動でリアルタイム更新されます）</div>
+      </div>
+    </div>
 
     <!-- 入力フォーム -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-      <div>
-        <label class="block font-semibold">日付</label>
-        <input type="date" id="date" class="w-full border p-2 rounded">
-      </div>
-      <div>
-        <label class="block font-semibold">筋力</label>
-        <input type="number" id="training" min="0" max="10" class="w-full border p-2 rounded">
-      </div>
-      <div>
-        <label class="block font-semibold">知力</label>
-        <input type="number" id="study" min="0" max="10" class="w-full border p-2 rounded">
-      </div>
-      <div>
-        <label class="block font-semibold">🪙 資産力</label>
-        <input type="number" id="asset" min="0" max="10" class="w-full border p-2 rounded">
-      </div>
-      <div>
-        <label class="block font-semibold">継続力</label>
-        <input type="number" id="continuity" min="0" max="10" class="w-full border p-2 rounded">
-      </div>
-      <div>
-        <label class="block font-semibold">生産性</label>
-        <input type="number" id="productivity" min="0" max="10" class="w-full border p-2 rounded">
-      </div>
-      <div>
-        <label class="block font-semibold">精神力</label>
-        <input type="number" id="mental" min="0" max="10" class="w-full border p-2 rounded">
-      </div>
+    <div class="card mb-6">
+      <h2 class="font-semibold mb-2">今日の記録（入力）</h2>
+      <form id="form" class="space-y-4">
+        <div>
+          <label class="text-sm font-medium">筋力（ベンチプレス重量） — 100kg = 100点</label>
+          <div class="flex items-center gap-3 mt-2">
+            <input id="trainingSlider" type="range" min="0" max="200" step="1" class="flex-1">
+            <input id="trainingNum" type="number" min="0" max="200" step="1" class="w-20 px-2 py-1 border rounded">
+            <div id="trainingPreview" class="ml-2 w-16 text-right text-sm text-gray-600">--</div>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-medium">知力（累計学習時間 h） — 1000h = 100点</label>
+          <div class="flex items-center gap-3 mt-2">
+            <input id="studySlider" type="range" min="0" max="2000" step="1" class="flex-1">
+            <input id="studyNum" type="number" min="0" max="2000" step="1" class="w-20 px-2 py-1 border rounded">
+            <div id="studyPreview" class="ml-2 w-16 text-right text-sm text-gray-600">--</div>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-medium">資産力（万円） — 1000万円 = 100点</label>
+          <div class="flex items-center gap-3 mt-2">
+            <input id="wealthSlider" type="range" min="0" max="2000" step="1" class="flex-1">
+            <input id="wealthNum" type="number" min="0" max="2000" step="1" class="w-20 px-2 py-1 border rounded">
+            <div id="wealthPreview" class="ml-2 w-16 text-right text-sm text-gray-600">--</div>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-medium">継続力（累計日数） — 100日 = 100点</label>
+          <div class="flex items-center gap-3 mt-2">
+            <input id="continuitySlider" type="range" min="0" max="200" step="1" class="flex-1">
+            <input id="continuityNum" type="number" min="0" max="200" step="1" class="w-20 px-2 py-1 border rounded">
+            <div id="continuityPreview" class="ml-2 w-16 text-right text-sm text-gray-600">--</div>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-medium">生産性（スクリーンタイム h） — 0h=100点, 10h以上=0点</label>
+          <div class="flex items-center gap-3 mt-2">
+            <input id="productivitySlider" type="range" min="0" max="24" step="0.1" class="flex-1">
+            <input id="productivityNum" type="number" min="0" max="24" step="0.1" class="w-20 px-2 py-1 border rounded">
+            <div id="productivityPreview" class="ml-2 w-16 text-right text-sm text-gray-600">--</div>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-medium">精神力（連続日数） — 100日 = 100点</label>
+          <div class="flex items-center gap-3 mt-2">
+            <input id="mentalSlider" type="range" min="0" max="500" step="1" class="flex-1">
+            <input id="mentalNum" type="number" min="0" max="500" step="1" class="w-20 px-2 py-1 border rounded">
+            <div id="mentalPreview" class="ml-2 w-16 text-right text-sm text-gray-600">--</div>
+          </div>
+        </div>
+
+        <div class="flex gap-3">
+          <button id="btnSave" class="flex-1 py-2 rounded bg-blue-600 text-white">保存してグラフ更新</button>
+          <button id="btnClear" type="button" class="py-2 px-4 rounded border">クリア</button>
+        </div>
+        <div id="message" class="text-sm text-gray-600 mt-2"></div>
+      </form>
     </div>
 
-    <button id="addBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-4">追加</button>
-
-    <!-- 合計表示 -->
-    <div class="mb-4">
-      <h2 class="font-semibold">合計スコア: <span id="totalScore">0</span></h2>
+    <!-- 推移グラフ -->
+    <div class="card mb-8">
+      <h2 class="font-semibold mb-3">過去 30 件の成長曲線</h2>
+      <canvas id="lineChart" height="140"></canvas>
     </div>
 
-    <!-- レーダーチャート -->
-    <canvas id="radarChart" class="mb-6"></canvas>
-
-    <!-- 履歴テーブル -->
-    <table class="w-full border-collapse border border-gray-300">
-      <thead>
-        <tr class="bg-gray-200">
-          <th class="border p-2">日付</th>
-          <th class="border p-2">筋力</th>
-          <th class="border p-2">知力</th>
-          <th class="border p-2">🪙資産力</th>
-          <th class="border p-2">継続力</th>
-          <th class="border p-2">生産性</th>
-          <th class="border p-2">精神力</th>
-          <th class="border p-2">操作</th>
-        </tr>
-      </thead>
-      <tbody id="history"></tbody>
-    </table>
+    <footer class="text-xs text-gray-400">Firebase + Firestore に保存（匿名ログイン）</footer>
   </div>
 
-  <script>
-    let entries = [];
+  <!-- Firebase + JS -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp,
+      query,
+      orderBy,
+      limit,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const ctx = document.getElementById('radarChart').getContext('2d');
-    const radarChart = new Chart(ctx, {
-      type: 'radar',
-      data: {
-        labels: ["筋力","知力","🪙資産力","継続力","生産性","精神力"],
-        datasets: [{
-          label: '最新スコア',
-          data: [0,0,0,0,0,0],
-          backgroundColor: 'rgba(59,130,246,0.2)',
-          borderColor: 'rgba(59,130,246,1)',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        scales: {
-          r: {
-            suggestedMin: 0,
-            suggestedMax: 10
-          }
-        }
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjUYJMm_i7KNUS24a1uzkHCA7x-9JQnrk",
+      authDomain: "status-167b3.firebaseapp.com",
+      projectId: "status-167b3",
+      storageBucket: "status-167b3.firebasestorage.app",
+      messagingSenderId: "63778940907",
+      appId: "1:63778940907:web:19aed49132137101739bae",
+      measurementId: "G-H2R43Q7M5S"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('form');
+    const msg = document.getElementById('message');
+    const avgScoreEl = document.getElementById('avgScore');
+    const lastDateEl = document.getElementById('lastDate');
+    const btnSave = document.getElementById('btnSave');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const btnClear = document.getElementById('btnClear');
+    const levelBar = document.getElementById('levelBar');
+
+    const fields = [
+      { key: 'training', slider: 'trainingSlider', num: 'trainingNum', preview: 'trainingPreview', norm: v=>Math.min(Math.round(v), 100) },
+      { key: 'study', slider: 'studySlider', num: 'studyNum', preview: 'studyPreview', norm: v=>Math.min(Math.round(v/10), 100) },
+      { key: 'wealth', slider: 'wealthSlider', num: 'wealthNum', preview: 'wealthPreview', norm: v=>Math.min(Math.round(v/10), 100) },
+      { key: 'continuity', slider: 'continuitySlider', num: 'continuityNum', preview: 'continuityPreview', norm: v=>Math.min(Math.round(v), 100) },
+      { key: 'productivity', slider: 'productivitySlider', num: 'productivityNum', preview: 'productivityPreview', norm: v=>Math.max(0, 100-Math.round(v*10)) },
+      { key: 'mental', slider: 'mentalSlider', num: 'mentalNum', preview: 'mentalPreview', norm: v=>Math.min(Math.round(v), 100) }
+    ];
+
+    let currentUser = null;
+    let myData = [];
+    let unsubscribe = null;
+    let radarChart = null;
+    let lineChart = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        setupRealtimeListener();
+      } else {
+        signInAnonymously(auth).catch(console.error);
       }
     });
 
-    function updateChart() {
-      if (entries.length === 0) return;
-      const latest = entries[entries.length - 1];
-      radarChart.data.datasets[0].data = [
-        latest.training,
-        latest.study,
-        latest.asset,
-        latest.continuity,
-        latest.productivity,
-        latest.mental
-      ];
-      radarChart.update();
-    }
-
-    function updateHistory() {
-      const tbody = document.getElementById('history');
-      tbody.innerHTML = '';
-      entries.forEach((e, index) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="border p-2">${e.date}</td>
-          <td class="border p-2">${e.training}</td>
-          <td class="border p-2">${e.study}</td>
-          <td class="border p-2">${e.asset}</td>
-          <td class="border p-2">${e.continuity}</td>
-          <td class="border p-2">${e.productivity}</td>
-          <td class="border p-2">${e.mental}</td>
-          <td class="border p-2">
-            <button onclick="deleteEntry(${index})" class="text-red-500 hover:underline">削除</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
+    function setupRealtimeListener() {
+      if (unsubscribe) unsubscribe();
+      const q = query(collection(db, 'habits'), orderBy('createdAt', 'desc'), limit(30));
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        myData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          date: doc.data().createdAt?.toDate() || new Date()
+        }));
+        updateDashboard();
       });
     }
 
-    function updateTotalScore() {
-      if (entries.length === 0) {
-        document.getElementById('totalScore').textContent = 0;
+    function updateDashboard() {
+      if (myData.length === 0) {
+        avgScoreEl.textContent = '--';
+        lastDateEl.textContent = '--';
+        levelBar.style.width = '0%';
+        levelBar.textContent = 'Lv -- 0%';
         return;
       }
-      const latest = entries[entries.length - 1];
-      const total = Number(latest.training)+Number(latest.study)+Number(latest.asset)+Number(latest.continuity)+Number(latest.productivity)+Number(latest.mental);
-      document.getElementById('totalScore').textContent = total;
+
+      const latest = myData[0];
+      const scores = [
+        latest.training || 0,
+        latest.study || 0,
+        latest.wealth || 0,
+        latest.continuity || 0,
+        latest.productivity || 0,
+        latest.mental || 0
+      ];
+      
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      avgScoreEl.textContent = avg.toFixed(1);
+      lastDateEl.textContent = latest.date.toLocaleDateString('ja-JP');
+
+      const level = Math.floor(avg / 10) + 1;
+      const levelProgress = (avg % 10) * 10;
+      levelBar.style.width = levelProgress + '%';
+      levelBar.textContent = `Lv ${level} ${levelProgress.toFixed(0)}%`;
+
+      updateRadarChart(scores);
+      updateLineChart();
     }
 
-    document.getElementById('addBtn').addEventListener('click', () => {
-      const entry = {
-        date: document.getElementById('date').value,
-        training: document.getElementById('training').value || 0,
-        study: document.getElementById('study').value || 0,
-        asset: document.getElementById('asset').value || 0,
-        continuity: document.getElementById('continuity').value || 0,
-        productivity: document.getElementById('productivity').value || 0,
-        mental: document.getElementById('mental').value || 0
-      };
-      entries.push(entry);
-      updateChart();
-      updateHistory();
-      updateTotalScore();
+    function updateRadarChart(scores) {
+      const ctx = document.getElementById('radarChart').getContext('2d');
+      if (radarChart) radarChart.destroy();
+      
+      radarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['筋力', '知力', '資産力', '継続力', '生産性', '精神力'],
+          datasets: [{
+            data: scores,
+            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+            borderColor: 'rgb(59, 130, 246)',
+            pointBackgroundColor: 'rgb(59, 130, 246)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgb(59, 130, 246)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              beginAtZero: true,
+              max: 100,
+              ticks: { display: false },
+              grid: { color: 'rgba(0,0,0,0.1)' },
+              angleLines: { color: 'rgba(0,0,0,0.1)' },
+              pointLabels: { font: { size: 10 } }
+            }
+          }
+        }
+      });
+    }
+
+    function updateLineChart() {
+      const ctx = document.getElementById('lineChart').getContext('2d');
+      if (lineChart) lineChart.destroy();
+      
+      const reversedData = [...myData].reverse();
+      const labels = reversedData.map(d => d.date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }));
+      
+      const datasets = [
+        { label: '筋力', data: reversedData.map(d => d.training || 0), borderColor: 'rgb(239, 68, 68)', backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+        { label: '知力', data: reversedData.map(d => d.study || 0), borderColor: 'rgb(34, 197, 94)', backgroundColor: 'rgba(34, 197, 94, 0.1)' },
+        { label: '資産力', data: reversedData.map(d => d.wealth || 0), borderColor: 'rgb(251, 191, 36)', backgroundColor: 'rgba(251, 191, 36, 0.1)' },
+        { label: '継続力', data: reversedData.map(d => d.continuity || 0), borderColor: 'rgb(168, 85, 247)', backgroundColor: 'rgba(168, 85, 247, 0.1)' },
+        { label: '生産性', data: reversedData.map(d => d.productivity || 0), borderColor: 'rgb(236, 72, 153)', backgroundColor: 'rgba(236, 72, 153, 0.1)' },
+        { label: '精神力', data: reversedData.map(d => d.mental || 0), borderColor: 'rgb(59, 130, 246)', backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+      ];
+
+      lineChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            x: { display: true },
+            y: { beginAtZero: true, max: 100 }
+          }
+        }
+      });
+    }
+
+    // スライダーと数値入力の同期
+    fields.forEach(field => {
+      const slider = document.getElementById(field.slider);
+      const num = document.getElementById(field.num);
+      const preview = document.getElementById(field.preview);
+
+      function updatePreview() {
+        const value = parseFloat(num.value) || 0;
+        const score = field.norm(value);
+        preview.textContent = score + '点';
+      }
+
+      slider.addEventListener('input', () => {
+        num.value = slider.value;
+        updatePreview();
+      });
+
+      num.addEventListener('input', () => {
+        slider.value = num.value;
+        updatePreview();
+      });
+
+      // 初期表示
+      updatePreview();
     });
 
-    function deleteEntry(index) {
-      entries.splice(index, 1);
-      updateChart();
-      updateHistory();
-      updateTotalScore();
-    }
+    // フォーム送信
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) return;
+
+      btnSave.disabled = true;
+      btnSave.textContent = '保存中...';
+
+      try {
+        const data = {};
+        fields.forEach(field => {
+          const value = parseFloat(document.getElementById(field.num).value) || 0;
+          data[field.key] = field.norm(value);
+        });
+
+        await addDoc(collection(db, 'habits'), {
+          ...data,
+          uid: currentUser.uid,
+          createdAt: serverTimestamp()
+        });
+
+        msg.textContent = '✅ 保存しました！';
+        setTimeout(() => msg.textContent = '', 3000);
+      } catch (error) {
+        console.error(error);
+        msg.textContent = '❌ エラーが発生しました';
+      } finally {
+        btnSave.disabled = false;
+        btnSave.textContent = '保存してグラフ更新';
+      }
+    });
+
+    // クリアボタン
+    btnClear.addEventListener('click', () => {
+      fields.forEach(field => {
+        document.getElementById(field.slider).value = 0;
+        document.getElementById(field.num).value = 0;
+        document.getElementById(field.preview).textContent = '0点';
+      });
+    });
+
+    // 手動更新ボタン
+    btnRefresh.addEventListener('click', () => {
+      if (currentUser) {
+        setupRealtimeListener();
+        msg.textContent = '🔄 データを更新しました';
+        setTimeout(() => msg.textContent = '', 2000);
+      }
+    });
+
   </script>
 </body>
 </html>
