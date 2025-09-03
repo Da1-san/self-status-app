@@ -7,89 +7,251 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.1/dist/pouchdb.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    
+    .glassmorphism {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    
+    .card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    
+    .gradient-border {
+      position: relative;
+      background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+      border-radius: 16px;
+      padding: 2px;
+    }
+    
+    .gradient-border-inner {
+      background: white;
+      border-radius: 14px;
+      height: 100%;
+      width: 100%;
+    }
+    
+    .floating-input {
+      transition: all 0.3s ease;
+    }
+    
+    .floating-input:focus {
+      transform: scale(1.02);
+      box-shadow: 0 10px 25px -10px rgba(99, 102, 241, 0.3);
+    }
+    
+    .level-glow {
+      box-shadow: 0 0 30px rgba(99, 102, 241, 0.4);
+    }
+    
+    .pulse-animation {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .text-shadow {
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .neo-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .neo-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px 0 rgba(102, 126, 234, 0.4);
+    }
+    
+    .tab-active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.3);
+    }
+    
+    .tab-inactive {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .stat-icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-50 to-purple-100 min-h-screen p-4 md:p-6">
-  <div class="max-w-5xl mx-auto">
-    <h1 class="text-3xl font-extrabold text-center mb-6 text-indigo-700">セルフステータス管理</h1>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+  <!-- Background decoration -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+    <div class="absolute top-0 right-1/4 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style="animation-delay: 2s;"></div>
+    <div class="absolute -bottom-8 left-1/2 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style="animation-delay: 4s;"></div>
+  </div>
 
-    <!-- タブ切替 -->
-    <div class="flex justify-center mb-6">
-      <button id="tabMain" class="px-4 py-2 rounded-l-lg bg-indigo-600 text-white">ステータス</button>
-      <button id="tabManage" class="px-4 py-2 rounded-r-lg bg-gray-200">管理画面</button>
+  <div class="relative z-10 max-w-6xl mx-auto p-4 md:p-8">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 text-shadow mb-4">
+        STATUS DASHBOARD
+      </h1>
+      <p class="text-gray-300 text-lg font-light">セルフステータス管理システム</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="flex justify-center mb-8">
+      <div class="glassmorphism rounded-2xl p-2 flex gap-2">
+        <button id="tabMain" class="tab-active px-8 py-3 rounded-xl text-white font-semibold transition-all duration-300">
+          📊 ステータス
+        </button>
+        <button id="tabManage" class="tab-inactive px-8 py-3 rounded-xl text-gray-300 font-semibold transition-all duration-300">
+          ⚙️ 管理画面
+        </button>
+      </div>
     </div>
 
     <!-- === ステータス画面 === -->
     <div id="mainView">
-      <!-- 入力フォーム -->
-      <div class="bg-white shadow-lg rounded-2xl p-6 mb-8">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">データ入力</h2>
-        <form id="statusForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium">筋力 (ベンチ重量 kg)</label>
-            <input type="number" id="training" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+      <!-- データ入力フォーム -->
+      <div class="glassmorphism rounded-3xl p-8 mb-8 card-hover">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+          <div class="stat-icon">📝</div>
+          データ入力
+        </h2>
+        <form id="statusForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-gray-300 flex items-center">
+              <div class="stat-icon">💪</div>
+              筋力 (ベンチ重量 kg)
+            </label>
+            <input type="number" id="training" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
           </div>
-          <div>
-            <label class="block text-sm font-medium">知力 (累積学習時間 h)</label>
-            <input type="number" id="study" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-gray-300 flex items-center">
+              <div class="stat-icon">🧠</div>
+              知力 (累積学習時間 h)
+            </label>
+            <input type="number" id="study" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
           </div>
-          <div>
-            <label class="block text-sm font-medium">資産力 (資産額 万円)</label>
-            <input type="number" id="asset" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-gray-300 flex items-center">
+              <div class="stat-icon">💰</div>
+              資産力 (資産額 万円)
+            </label>
+            <input type="number" id="asset" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
           </div>
-          <div>
-            <label class="block text-sm font-medium">継続力 (継続日数)</label>
-            <input type="number" id="continuity" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-gray-300 flex items-center">
+              <div class="stat-icon">⚡</div>
+              継続力 (継続日数)
+            </label>
+            <input type="number" id="continuity" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
           </div>
-          <div>
-            <label class="block text-sm font-medium">生産性 (スクリーンタイム h)</label>
-            <input type="number" id="productivity" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-gray-300 flex items-center">
+              <div class="stat-icon">🚀</div>
+              生産性 (スクリーンタイム h)
+            </label>
+            <input type="number" id="productivity" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
           </div>
-          <div>
-            <label class="block text-sm font-medium">精神力 (継続日数)</label>
-            <input type="number" id="mental" class="mt-1 block w-full border rounded-lg p-2" inputmode="numeric"/>
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-gray-300 flex items-center">
+              <div class="stat-icon">🎯</div>
+              精神力 (継続日数)
+            </label>
+            <input type="number" id="mental" class="floating-input w-full bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400" inputmode="numeric" placeholder="0"/>
           </div>
-          <div class="col-span-1 md:col-span-2 text-right">
-            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700 transition">
-              保存
+          <div class="col-span-1 md:col-span-2 lg:col-span-3 text-center mt-4">
+            <button type="submit" class="neo-button px-12 py-4 rounded-2xl text-white font-bold text-lg">
+              💾 保存する
             </button>
           </div>
         </form>
       </div>
 
       <!-- レベル表示 -->
-      <div class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-2xl shadow-xl p-6 mb-8">
-        <h2 class="text-xl font-bold mb-2">レベル</h2>
-        <div class="flex items-center justify-between mb-2">
-          <span id="levelValue" class="text-3xl font-extrabold">--</span>
-          <span class="text-sm opacity-80">Lv / 100</span>
+      <div class="level-glow glassmorphism rounded-3xl p-8 mb-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-yellow-400/20 to-transparent rounded-full"></div>
+        <h2 class="text-2xl font-bold text-white mb-4 flex items-center">
+          <div class="stat-icon">👑</div>
+          レベル
+        </h2>
+        <div class="flex items-center justify-between mb-4">
+          <span id="levelValue" class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 pulse-animation">--</span>
+          <div class="text-right">
+            <div class="text-sm text-gray-400">MAX LEVEL</div>
+            <div class="text-2xl font-bold text-gray-300">100</div>
+          </div>
         </div>
-        <div class="w-full bg-white/30 rounded-full h-4 overflow-hidden mb-2">
-          <div id="levelBar" class="bg-white h-4 rounded-full transition-all duration-700 ease-out" style="width:0%"></div>
+        <div class="relative w-full bg-white/20 rounded-full h-6 overflow-hidden mb-4">
+          <div id="levelBar" class="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 h-6 rounded-full transition-all duration-1000 ease-out relative" style="width:0%">
+            <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
+          </div>
         </div>
-        <div id="nextLevelInfo" class="text-sm opacity-90">--</div>
+        <div id="nextLevelInfo" class="text-gray-300 font-medium">--</div>
       </div>
 
-      <!-- レーダーチャート -->
-      <div class="bg-white shadow-lg rounded-2xl p-6 mb-8">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">最新ステータス</h2>
-        <canvas id="radarChart"></canvas>
-        <div class="mt-4 text-center text-gray-500">
-          平均スコア: <span id="avgScore" class="text-lg font-bold text-indigo-600">--</span><br/>
-          <span id="lastDate" class="text-sm">--</span>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- レーダーチャート -->
+        <div class="glassmorphism rounded-3xl p-8 card-hover">
+          <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+            <div class="stat-icon">📈</div>
+            最新ステータス
+          </h2>
+          <div class="bg-white/5 rounded-2xl p-4">
+            <canvas id="radarChart"></canvas>
+          </div>
+          <div class="mt-6 text-center space-y-2">
+            <div class="text-gray-300">平均スコア</div>
+            <div class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+              <span id="avgScore">--</span>
+            </div>
+            <div id="lastDate" class="text-sm text-gray-400">--</div>
+          </div>
         </div>
-      </div>
 
-      <!-- 推移チャート -->
-      <div class="bg-white shadow-lg rounded-2xl p-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">スコア推移</h2>
-        <canvas id="lineChart"></canvas>
+        <!-- 推移チャート -->
+        <div class="glassmorphism rounded-3xl p-8 card-hover">
+          <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+            <div class="stat-icon">📊</div>
+            スコア推移
+          </h2>
+          <div class="bg-white/5 rounded-2xl p-4">
+            <canvas id="lineChart"></canvas>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- === 管理画面 === -->
     <div id="manageView" class="hidden">
-      <div class="bg-white shadow-lg rounded-2xl p-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-700">履歴管理</h2>
+      <div class="glassmorphism rounded-3xl p-8 card-hover">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+          <div class="stat-icon">🗂️</div>
+          履歴管理
+        </h2>
         <div id="historyList" class="space-y-4"></div>
       </div>
     </div>
@@ -115,18 +277,14 @@
     tabMain.addEventListener('click', ()=>{
       mainView.classList.remove('hidden');
       manageView.classList.add('hidden');
-      tabMain.classList.add('bg-indigo-600','text-white');
-      tabMain.classList.remove('bg-gray-200');
-      tabManage.classList.remove('bg-indigo-600','text-white');
-      tabManage.classList.add('bg-gray-200');
+      tabMain.className = 'tab-active px-8 py-3 rounded-xl text-white font-semibold transition-all duration-300';
+      tabManage.className = 'tab-inactive px-8 py-3 rounded-xl text-gray-300 font-semibold transition-all duration-300';
     });
     tabManage.addEventListener('click', ()=>{
       manageView.classList.remove('hidden');
       mainView.classList.add('hidden');
-      tabManage.classList.add('bg-indigo-600','text-white');
-      tabManage.classList.remove('bg-gray-200');
-      tabMain.classList.remove('bg-indigo-600','text-white');
-      tabMain.classList.add('bg-gray-200');
+      tabManage.className = 'tab-active px-8 py-3 rounded-xl text-white font-semibold transition-all duration-300';
+      tabMain.className = 'tab-inactive px-8 py-3 rounded-xl text-gray-300 font-semibold transition-all duration-300';
       loadHistory();
     });
 
@@ -196,15 +354,31 @@
         datasets: [{
           label: 'ステータス',
           data: [0,0,0,0,0,0],
-          backgroundColor: 'rgba(99,102,241,0.2)',
-          borderColor: 'rgba(99,102,241,1)',
-          borderWidth: 2,
-          pointBackgroundColor: 'rgba(139,92,246,1)'
+          backgroundColor: 'rgba(99,102,241,0.15)',
+          borderColor: '#667eea',
+          borderWidth: 3,
+          pointBackgroundColor: '#764ba2',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 6
         }]
       },
       options: {
         responsive: true,
-        scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } },
+        scales: { 
+          r: { 
+            min: 0, 
+            max: 100, 
+            ticks: { 
+              stepSize: 20,
+              color: 'rgba(255,255,255,0.5)',
+              backdropColor: 'transparent'
+            },
+            grid: { color: 'rgba(255,255,255,0.1)' },
+            angleLines: { color: 'rgba(255,255,255,0.1)' },
+            pointLabels: { color: 'rgba(255,255,255,0.8)', font: { size: 12, weight: 'bold' } }
+          } 
+        },
         plugins: { legend: { display: false } }
       }
     });
@@ -216,15 +390,32 @@
         datasets: [{
           label: '平均スコア推移',
           data: [],
-          borderColor: 'rgba(16,185,129,1)',
-          backgroundColor: 'rgba(16,185,129,0.2)',
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,0.1)',
           fill: true,
-          tension: 0.3
+          tension: 0.4,
+          borderWidth: 3,
+          pointBackgroundColor: '#10b981',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 6
         }]
       },
       options: {
         responsive: true,
-        scales: { y: { min: 0, max: 100 } }
+        scales: { 
+          y: { 
+            min: 0, 
+            max: 100,
+            ticks: { color: 'rgba(255,255,255,0.7)' },
+            grid: { color: 'rgba(255,255,255,0.1)' }
+          },
+          x: {
+            ticks: { color: 'rgba(255,255,255,0.7)' },
+            grid: { color: 'rgba(255,255,255,0.1)' }
+          }
+        },
+        plugins: { legend: { display: false } }
       }
     });
 
@@ -279,15 +470,22 @@
       result.rows.forEach(r=>{
         const d = r.doc;
         const div = document.createElement('div');
-        div.className = "border rounded-lg p-4 flex justify-between items-center";
+        div.className = "glassmorphism rounded-2xl p-6 flex justify-between items-center card-hover";
         div.innerHTML = `
           <div>
-            <div class="font-semibold">${new Date(d.ts).toLocaleString()}</div>
-            <div class="text-sm text-gray-600">筋力:${d.training} 知力:${d.study} 資産力:${d.asset} 継続:${d.continuity} 生産性:${d.productivity} 精神力:${d.mental}</div>
+            <div class="font-bold text-white text-lg">${new Date(d.ts).toLocaleString()}</div>
+            <div class="text-gray-300 mt-2 flex flex-wrap gap-4">
+              <span class="flex items-center"><div class="stat-icon">💪</div>${d.training}</span>
+              <span class="flex items-center"><div class="stat-icon">🧠</div>${d.study}</span>
+              <span class="flex items-center"><div class="stat-icon">💰</div>${d.asset}</span>
+              <span class="flex items-center"><div class="stat-icon">⚡</div>${d.continuity}</span>
+              <span class="flex items-center"><div class="stat-icon">🚀</div>${d.productivity}</span>
+              <span class="flex items-center"><div class="stat-icon">🎯</div>${d.mental}</span>
+            </div>
           </div>
-          <div class="flex gap-2">
-            <button class="px-2 py-1 bg-yellow-400 text-white rounded editBtn">編集</button>
-            <button class="px-2 py-1 bg-red-500 text-white rounded deleteBtn">削除</button>
+          <div class="flex gap-3">
+            <button class="neo-button px-4 py-2 rounded-xl text-white font-semibold editBtn">✏️ 編集</button>
+            <button class="px-4 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-xl font-semibold transition-all deleteBtn">🗑️ 削除</button>
           </div>
         `;
         div.querySelector('.deleteBtn').addEventListener('click', async ()=>{
