@@ -105,30 +105,12 @@
 
       <!-- 各ステータス推移（個別） -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-        <div class="glassmorphism rounded-3xl p-8 card-hover">
-          <h2 class="text-xl font-bold text-white mb-4">💪 筋力推移</h2>
-          <canvas id="trainingChart"></canvas>
-        </div>
-        <div class="glassmorphism rounded-3xl p-8 card-hover">
-          <h2 class="text-xl font-bold text-white mb-4">🧠 知力推移</h2>
-          <canvas id="studyChart"></canvas>
-        </div>
-        <div class="glassmorphism rounded-3xl p-8 card-hover">
-          <h2 class="text-xl font-bold text-white mb-4">💰 資産力推移</h2>
-          <canvas id="assetChart"></canvas>
-        </div>
-        <div class="glassmorphism rounded-3xl p-8 card-hover">
-          <h2 class="text-xl font-bold text-white mb-4">⚡ 継続力推移</h2>
-          <canvas id="continuityChart"></canvas>
-        </div>
-        <div class="glassmorphism rounded-3xl p-8 card-hover">
-          <h2 class="text-xl font-bold text-white mb-4">🚀 生産性推移</h2>
-          <canvas id="productivityChart"></canvas>
-        </div>
-        <div class="glassmorphism rounded-3xl p-8 card-hover">
-          <h2 class="text-xl font-bold text-white mb-4">🎯 精神力推移</h2>
-          <canvas id="mentalChart"></canvas>
-        </div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover"><h2 class="text-xl font-bold text-white mb-4">💪 筋力推移</h2><canvas id="trainingChart"></canvas></div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover"><h2 class="text-xl font-bold text-white mb-4">🧠 知力推移</h2><canvas id="studyChart"></canvas></div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover"><h2 class="text-xl font-bold text-white mb-4">💰 資産力推移</h2><canvas id="assetChart"></canvas></div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover"><h2 class="text-xl font-bold text-white mb-4">⚡ 継続力推移</h2><canvas id="continuityChart"></canvas></div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover"><h2 class="text-xl font-bold text-white mb-4">🚀 生産性推移</h2><canvas id="productivityChart"></canvas></div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover"><h2 class="text-xl font-bold text-white mb-4">🎯 精神力推移</h2><canvas id="mentalChart"></canvas></div>
       </div>
     </div>
 
@@ -142,6 +124,7 @@
 
   <script>
     const db = new PouchDB('self_status');
+    let editId = null;
 
     const radarCtx = document.getElementById('radarChart').getContext('2d');
     const lineCtx = document.getElementById('lineChart').getContext('2d');
@@ -280,8 +263,40 @@
           const div=document.createElement('div');
           div.className='bg-gray-800 text-white p-4 rounded-xl';
           div.innerHTML=`<div class="font-bold">${new Date(d.date).toLocaleString()} - 総合: ${d.total}</div>
-          <div class="text-sm text-gray-300">筋力:${d.training} | 知力:${d.study} (入力:${d.raw.study}h) | 資産力:${d.asset} (入力:${d.raw.asset}万円) | 継続力:${d.continuity} | 生産性:${d.productivity} (入力:${d.raw.productivity}h) | 精神力:${d.mental}</div>`;
+          <div class="text-sm text-gray-300">筋力:${d.training} | 知力:${d.study} (入力:${d.raw.study}h) | 資産力:${d.asset} (入力:${d.raw.asset}万円) | 継続力:${d.continuity} | 生産性:${d.productivity} (入力:${d.raw.productivity}h) | 精神力:${d.mental}</div>
+          <div class="mt-2 flex gap-2">
+            <button class="px-3 py-1 bg-blue-500 rounded text-xs" onclick="editEntry('${d._id}')">編集</button>
+            <button class="px-3 py-1 bg-red-500 rounded text-xs" onclick="deleteEntry('${d._id}', '${d._rev}')">削除</button>
+          </div>`;
           historyList.appendChild(div);
+        });
+      });
+    }
+
+    function editEntry(id){
+      db.get(id).then(doc=>{
+        editId=id;
+        document.getElementById('training').value=doc.training;
+        document.getElementById('study').value=doc.raw.study;
+        document.getElementById('asset').value=doc.raw.asset;
+        document.getElementById('continuity').value=doc.continuity;
+        document.getElementById('productivity').value=doc.raw.productivity;
+        document.getElementById('mental').value=doc.mental;
+        window.scrollTo({top:0,behavior:'smooth'});
+      });
+    }
+
+    function deleteEntry(id,rev){
+      db.remove(id,rev).then(()=>{
+        refreshHistory();
+        db.allDocs({include_docs:true}).then(res=>{
+          if(res.rows.length>0){
+            const latest=res.rows[res.rows.length-1].doc;
+            updateCharts(latest);
+            updateLevel(latest.total);
+          } else {
+            location.reload();
+          }
         });
       });
     }
@@ -301,13 +316,32 @@
 
       let total=training+study+asset+continuity+productivity+mental;
 
-      const doc={_id:new Date().toISOString(),date:new Date().toISOString(),training,study,asset,continuity,productivity,mental,total,raw:{study:studyInput,asset:assetInput,productivity:productivityInput}};
-      db.put(doc).then(()=>{
-        updateCharts(doc);
-        updateLevel(total);
-        refreshHistory();
-        localStorage.setItem('lastInputs',JSON.stringify({training,studyInput,assetInput,continuity,productivityInput,mental}));
-      });
+      if(editId){
+        db.get(editId).then(doc=>{
+          doc.training=training;
+          doc.study=study;
+          doc.asset=asset;
+          doc.continuity=continuity;
+          doc.productivity=productivity;
+          doc.mental=mental;
+          doc.total=total;
+          doc.raw={study:studyInput,asset:assetInput,productivity:productivityInput};
+          doc.date=new Date().toISOString();
+          return db.put(doc);
+        }).then(()=>{
+          editId=null;
+          refreshHistory();
+          updateLevel(total);
+          updateCharts({training,study,asset,continuity,productivity,mental,total,date:new Date(),raw:{study:studyInput,asset:assetInput,productivity:productivityInput}});
+        });
+      } else {
+        const doc={_id:new Date().toISOString(),date:new Date().toISOString(),training,study,asset,continuity,productivity,mental,total,raw:{study:studyInput,asset:assetInput,productivity:productivityInput}};
+        db.put(doc).then(()=>{
+          updateCharts(doc);
+          updateLevel(total);
+          refreshHistory();
+        });
+      }
     });
 
     window.addEventListener('load',()=>{
@@ -319,16 +353,6 @@
           updateLevel(latest.total);
         }
       });
-      const saved=localStorage.getItem('lastInputs');
-      if(saved){
-        const d=JSON.parse(saved);
-        document.getElementById('training').value=d.training??'';
-        document.getElementById('study').value=d.studyInput??'';
-        document.getElementById('asset').value=d.assetInput??'';
-        document.getElementById('continuity').value=d.continuity??'';
-        document.getElementById('productivity').value=d.productivityInput??'';
-        document.getElementById('mental').value=d.mental??'';
-      }
     });
   </script>
 </body>
