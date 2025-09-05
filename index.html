@@ -98,15 +98,37 @@
         </div>
 
         <div class="glassmorphism rounded-3xl p-8 card-hover">
-          <h2 class="text-2xl font-bold text-white mb-6 flex items-center"><div class="stat-icon">📊</div>スコア推移</h2>
+          <h2 class="text-2xl font-bold text-white mb-6 flex items-center"><div class="stat-icon">📊</div>総合スコア推移</h2>
           <canvas id="lineChart"></canvas>
         </div>
       </div>
 
-      <!-- 各ステータス推移グラフ -->
-      <div class="glassmorphism rounded-3xl p-8 card-hover mt-8">
-        <h2 class="text-2xl font-bold text-white mb-6 flex items-center"><div class="stat-icon">📉</div>各ステータス推移</h2>
-        <canvas id="multiLineChart"></canvas>
+      <!-- 各ステータス推移（個別） -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+        <div class="glassmorphism rounded-3xl p-8 card-hover">
+          <h2 class="text-xl font-bold text-white mb-4">💪 筋力推移</h2>
+          <canvas id="trainingChart"></canvas>
+        </div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover">
+          <h2 class="text-xl font-bold text-white mb-4">🧠 知力推移</h2>
+          <canvas id="studyChart"></canvas>
+        </div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover">
+          <h2 class="text-xl font-bold text-white mb-4">💰 資産力推移</h2>
+          <canvas id="assetChart"></canvas>
+        </div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover">
+          <h2 class="text-xl font-bold text-white mb-4">⚡ 継続力推移</h2>
+          <canvas id="continuityChart"></canvas>
+        </div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover">
+          <h2 class="text-xl font-bold text-white mb-4">🚀 生産性推移</h2>
+          <canvas id="productivityChart"></canvas>
+        </div>
+        <div class="glassmorphism rounded-3xl p-8 card-hover">
+          <h2 class="text-xl font-bold text-white mb-4">🎯 精神力推移</h2>
+          <canvas id="mentalChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -120,9 +142,16 @@
 
   <script>
     const db = new PouchDB('self_status');
+
     const radarCtx = document.getElementById('radarChart').getContext('2d');
     const lineCtx = document.getElementById('lineChart').getContext('2d');
-    const multiLineCtx = document.getElementById('multiLineChart').getContext('2d');
+    const trainingCtx = document.getElementById('trainingChart').getContext('2d');
+    const studyCtx = document.getElementById('studyChart').getContext('2d');
+    const assetCtx = document.getElementById('assetChart').getContext('2d');
+    const continuityCtx = document.getElementById('continuityChart').getContext('2d');
+    const productivityCtx = document.getElementById('productivityChart').getContext('2d');
+    const mentalCtx = document.getElementById('mentalChart').getContext('2d');
+
     const avgScoreEl = document.getElementById('avgScore');
     const lastDateEl = document.getElementById('lastDate');
     const levelValueEl = document.getElementById('levelValue');
@@ -135,8 +164,18 @@
     const tabMain = document.getElementById('tabMain');
     const tabManage = document.getElementById('tabManage');
 
-    tabMain.addEventListener('click',()=>{mainView.classList.remove('hidden');manageView.classList.add('hidden');tabMain.classList.add('tab-active');tabMain.classList.remove('tab-inactive');tabManage.classList.remove('tab-active');tabManage.classList.add('tab-inactive');});
-    tabManage.addEventListener('click',()=>{manageView.classList.remove('hidden');mainView.classList.add('hidden');tabManage.classList.add('tab-active');tabManage.classList.remove('tab-inactive');tabMain.classList.remove('tab-active');tabMain.classList.add('tab-inactive');});
+    tabMain.addEventListener('click',()=>{
+      mainView.classList.remove('hidden');
+      manageView.classList.add('hidden');
+      tabMain.classList.add('tab-active');tabMain.classList.remove('tab-inactive');
+      tabManage.classList.remove('tab-active');tabManage.classList.add('tab-inactive');
+    });
+    tabManage.addEventListener('click',()=>{
+      manageView.classList.remove('hidden');
+      mainView.classList.add('hidden');
+      tabManage.classList.add('tab-active');tabManage.classList.remove('tab-inactive');
+      tabMain.classList.remove('tab-active');tabMain.classList.add('tab-inactive');
+    });
 
     // レーダーチャート
     let radarChart = new Chart(radarCtx,{
@@ -158,36 +197,25 @@
       data:{ labels:[], datasets:[{label:'総合スコア',data:[],borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.2)',fill:true,tension:0.4}]},
       options:{
         responsive:true,
-        scales:{
-          x:{ ticks:{ color:'#fff' } },
-          y:{ ticks:{ color:'#fff' }, beginAtZero:true, max:500 }
-        }
+        scales:{x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'},beginAtZero:true,max:500}}
       }
     });
 
-    // 各ステータス折れ線
-    let multiLineChart = new Chart(multiLineCtx,{
-      type:'line',
-      data:{
-        labels:[],
-        datasets:[
-          {label:'筋力',data:[],borderColor:'#ef4444',tension:0.3},
-          {label:'知力',data:[],borderColor:'#3b82f6',tension:0.3},
-          {label:'資産力',data:[],borderColor:'#22c55e',tension:0.3},
-          {label:'継続力',data:[],borderColor:'#eab308',tension:0.3},
-          {label:'生産性',data:[],borderColor:'#8b5cf6',tension:0.3},
-          {label:'精神力',data:[],borderColor:'#f97316',tension:0.3},
-        ]
-      },
-      options:{
-        responsive:true,
-        scales:{
-          x:{ ticks:{ color:'#fff' } },
-          y:{ ticks:{ color:'#fff' }, beginAtZero:true, max:100 }
-        },
-        plugins:{ legend:{ labels:{ color:'#fff' } } }
-      }
-    });
+    // 個別チャート作成関数
+    function createLineChart(ctx,label,color){
+      return new Chart(ctx,{
+        type:'line',
+        data:{labels:[],datasets:[{label,data:[],borderColor:color,backgroundColor:color+'33',fill:true,tension:0.3}]},
+        options:{responsive:true,scales:{x:{ticks:{color:'#fff'}},y:{ticks:{color:'#fff'},beginAtZero:true,max:100}},plugins:{legend:{labels:{color:'#fff'}}}}
+      });
+    }
+
+    let trainingChart=createLineChart(trainingCtx,"筋力","#ef4444");
+    let studyChart=createLineChart(studyCtx,"知力","#3b82f6");
+    let assetChart=createLineChart(assetCtx,"資産力","#22c55e");
+    let continuityChart=createLineChart(continuityCtx,"継続力","#eab308");
+    let productivityChart=createLineChart(productivityCtx,"生産性","#8b5cf6");
+    let mentalChart=createLineChart(mentalCtx,"精神力","#f97316");
 
     // 換算関数
     function convertStudy(hours){ return Math.min(100, Math.floor(hours / 10)); }
@@ -198,72 +226,61 @@
     const LEVEL_K = 100/Math.sqrt(500);
     function calcLevel(total){
       let lvl = Math.floor(Math.sqrt(total) * LEVEL_K);
-      if(lvl < 0) lvl = 0;
-      if(lvl > 100) lvl = 100;
-      return lvl;
+      return Math.min(lvl,100);
     }
     function nextLevelRemaining(total){
-      const current = calcLevel(total);
-      if(current >= 100) return 0;
-      const nextLvl = current + 1;
-      const reqTotal = Math.pow(nextLvl / LEVEL_K, 2);
-      return Math.max(0, Math.ceil(reqTotal - total));
+      let lvl=calcLevel(total);
+      if(lvl>=100) return 0;
+      let nextThreshold=Math.pow((lvl+1)/LEVEL_K,2);
+      return Math.ceil(nextThreshold-total);
+    }
+    function updateLevel(total){
+      let level=calcLevel(total);
+      levelValueEl.textContent=level;
+      levelBarEl.style.width=level+'%';
+      nextLevelInfoEl.textContent=`次のレベルまであと ${nextLevelRemaining(total)} ポイント`;
     }
 
+    // グラフ更新
     function updateCharts(latest){
-      radarChart.data.datasets[0].data = [latest.training,latest.study,latest.asset,latest.continuity,latest.productivity,latest.mental];
-      radarChart.update();
-
       db.allDocs({include_docs:true}).then(res=>{
-        let labels=[],data=[];
-        let tArr=[],sArr=[],aArr=[],cArr=[],pArr=[],mArr=[];
-        res.rows.forEach(r=>{
-          labels.push(new Date(r.doc.date).toLocaleDateString());
-          data.push(r.doc.total);
-          tArr.push(r.doc.training);
-          sArr.push(r.doc.study);
-          aArr.push(r.doc.asset);
-          cArr.push(r.doc.continuity);
-          pArr.push(r.doc.productivity);
-          mArr.push(r.doc.mental);
-        });
+        let labels=res.rows.map(r=>new Date(r.doc.date).toLocaleDateString());
+        let totals=res.rows.map(r=>r.doc.total);
+        let trainingData=res.rows.map(r=>r.doc.training);
+        let studyData=res.rows.map(r=>r.doc.study);
+        let assetData=res.rows.map(r=>r.doc.asset);
+        let continuityData=res.rows.map(r=>r.doc.continuity);
+        let productivityData=res.rows.map(r=>r.doc.productivity);
+        let mentalData=res.rows.map(r=>r.doc.mental);
+
+        radarChart.data.datasets[0].data=[latest.training,latest.study,latest.asset,latest.continuity,latest.productivity,latest.mental];
+        radarChart.update();
+
         lineChart.data.labels=labels;
-        lineChart.data.datasets[0].data=data;
+        lineChart.data.datasets[0].data=totals;
         lineChart.update();
 
-        multiLineChart.data.labels=labels;
-        multiLineChart.data.datasets[0].data=tArr;
-        multiLineChart.data.datasets[1].data=sArr;
-        multiLineChart.data.datasets[2].data=aArr;
-        multiLineChart.data.datasets[3].data=cArr;
-        multiLineChart.data.datasets[4].data=pArr;
-        multiLineChart.data.datasets[5].data=mArr;
-        multiLineChart.update();
+        trainingChart.data.labels=labels; trainingChart.data.datasets[0].data=trainingData; trainingChart.update();
+        studyChart.data.labels=labels; studyChart.data.datasets[0].data=studyData; studyChart.update();
+        assetChart.data.labels=labels; assetChart.data.datasets[0].data=assetData; assetChart.update();
+        continuityChart.data.labels=labels; continuityChart.data.datasets[0].data=continuityData; continuityChart.update();
+        productivityChart.data.labels=labels; productivityChart.data.datasets[0].data=productivityData; productivityChart.update();
+        mentalChart.data.labels=labels; mentalChart.data.datasets[0].data=mentalData; mentalChart.update();
+
+        avgScoreEl.textContent=Math.round(latest.total/6);
+        lastDateEl.textContent=`最終更新: ${new Date(latest.date).toLocaleString()}`;
       });
-
-      avgScoreEl.textContent = (latest.total/5).toFixed(1);
-      lastDateEl.textContent = new Date(latest.date).toLocaleString();
-    }
-
-    function updateLevel(total){
-      const level = calcLevel(total);
-      levelValueEl.textContent = level;
-      levelBarEl.style.width = level + '%';
-      const remain = nextLevelRemaining(total);
-      nextLevelInfoEl.textContent = `次のレベルまであと ${remain} ポイント`;
     }
 
     function refreshHistory(){
       db.allDocs({include_docs:true}).then(res=>{
         historyList.innerHTML='';
         res.rows.reverse().forEach(r=>{
-          const d = r.doc;
+          const d=r.doc;
           const div=document.createElement('div');
           div.className='bg-gray-800 text-white p-4 rounded-xl';
-          div.innerHTML = `
-            <div class="font-bold">${new Date(d.date).toLocaleString()} - 総合: ${d.total}</div>
-            <div class="text-sm text-gray-300">筋力: ${d.training} | 知力: ${d.study} (入力:${d.raw.study}h) | 資産力: ${d.asset} (入力:${d.raw.asset}万円) | 継続力: ${d.continuity} | 生産性: ${d.productivity} (入力:${d.raw.productivity}h) | 精神力: ${d.mental}</div>
-          `;
+          div.innerHTML=`<div class="font-bold">${new Date(d.date).toLocaleString()} - 総合: ${d.total}</div>
+          <div class="text-sm text-gray-300">筋力:${d.training} | 知力:${d.study} (入力:${d.raw.study}h) | 資産力:${d.asset} (入力:${d.raw.asset}万円) | 継続力:${d.continuity} | 生産性:${d.productivity} (入力:${d.raw.productivity}h) | 精神力:${d.mental}</div>`;
           historyList.appendChild(div);
         });
       });
@@ -282,20 +299,14 @@
       let asset=convertAsset(assetInput);
       let productivity=convertProductivity(productivityInput);
 
-      let total = training+study+asset+continuity+mental;
+      let total=training+study+asset+continuity+productivity+mental;
 
-      const doc={
-        _id:new Date().toISOString(),
-        date:new Date().toISOString(),
-        training,study,asset,continuity,productivity,mental,
-        total,
-        raw:{study:studyInput, asset:assetInput, productivity:productivityInput}
-      };
+      const doc={_id:new Date().toISOString(),date:new Date().toISOString(),training,study,asset,continuity,productivity,mental,total,raw:{study:studyInput,asset:assetInput,productivity:productivityInput}};
       db.put(doc).then(()=>{
         updateCharts(doc);
         updateLevel(total);
         refreshHistory();
-        localStorage.setItem('lastInputs', JSON.stringify({training, studyInput, assetInput, continuity, productivityInput, mental}));
+        localStorage.setItem('lastInputs',JSON.stringify({training,studyInput,assetInput,continuity,productivityInput,mental}));
       });
     });
 
@@ -308,15 +319,15 @@
           updateLevel(latest.total);
         }
       });
-      const saved = localStorage.getItem('lastInputs');
+      const saved=localStorage.getItem('lastInputs');
       if(saved){
-        const d = JSON.parse(saved);
-        document.getElementById('training').value = d.training ?? '';
-        document.getElementById('study').value = d.studyInput ?? '';
-        document.getElementById('asset').value = d.assetInput ?? '';
-        document.getElementById('continuity').value = d.continuity ?? '';
-        document.getElementById('productivity').value = d.productivityInput ?? '';
-        document.getElementById('mental').value = d.mental ?? '';
+        const d=JSON.parse(saved);
+        document.getElementById('training').value=d.training??'';
+        document.getElementById('study').value=d.studyInput??'';
+        document.getElementById('asset').value=d.assetInput??'';
+        document.getElementById('continuity').value=d.continuity??'';
+        document.getElementById('productivity').value=d.productivityInput??'';
+        document.getElementById('mental').value=d.mental??'';
       }
     });
   </script>
