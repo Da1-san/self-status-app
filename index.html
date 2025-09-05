@@ -102,6 +102,12 @@
           <canvas id="lineChart"></canvas>
         </div>
       </div>
+
+      <!-- 各ステータス推移グラフ -->
+      <div class="glassmorphism rounded-3xl p-8 card-hover mt-8">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center"><div class="stat-icon">📉</div>各ステータス推移</h2>
+        <canvas id="multiLineChart"></canvas>
+      </div>
     </div>
 
     <div id="manageView" class="hidden">
@@ -116,6 +122,7 @@
     const db = new PouchDB('self_status');
     const radarCtx = document.getElementById('radarChart').getContext('2d');
     const lineCtx = document.getElementById('lineChart').getContext('2d');
+    const multiLineCtx = document.getElementById('multiLineChart').getContext('2d');
     const avgScoreEl = document.getElementById('avgScore');
     const lastDateEl = document.getElementById('lastDate');
     const levelValueEl = document.getElementById('levelValue');
@@ -131,7 +138,7 @@
     tabMain.addEventListener('click',()=>{mainView.classList.remove('hidden');manageView.classList.add('hidden');tabMain.classList.add('tab-active');tabMain.classList.remove('tab-inactive');tabManage.classList.remove('tab-active');tabManage.classList.add('tab-inactive');});
     tabManage.addEventListener('click',()=>{manageView.classList.remove('hidden');mainView.classList.add('hidden');tabManage.classList.add('tab-active');tabManage.classList.remove('tab-inactive');tabMain.classList.remove('tab-active');tabMain.classList.add('tab-inactive');});
 
-    // チャート
+    // レーダーチャート
     let radarChart = new Chart(radarCtx,{
       type:'radar',
       data:{
@@ -145,6 +152,7 @@
       }
     });
 
+    // 総合スコア折れ線
     let lineChart = new Chart(lineCtx,{
       type:'line',
       data:{ labels:[], datasets:[{label:'総合スコア',data:[],borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.2)',fill:true,tension:0.4}]},
@@ -157,13 +165,37 @@
       }
     });
 
-    // 換算関数（各項目は最大100）
-    function convertStudy(hours){ return Math.min(100, Math.floor(hours / 10)); }          // 1000時間→100
-    function convertAsset(millionYen){ return Math.min(100, Math.floor(millionYen / 10)); } // 1000万円→100
-    function convertProductivity(screenTime){ return Math.max(0, Math.min(100, 100 - (screenTime * 10))); } // 0h→100, 10h→0
+    // 各ステータス折れ線
+    let multiLineChart = new Chart(multiLineCtx,{
+      type:'line',
+      data:{
+        labels:[],
+        datasets:[
+          {label:'筋力',data:[],borderColor:'#ef4444',tension:0.3},
+          {label:'知力',data:[],borderColor:'#3b82f6',tension:0.3},
+          {label:'資産力',data:[],borderColor:'#22c55e',tension:0.3},
+          {label:'継続力',data:[],borderColor:'#eab308',tension:0.3},
+          {label:'生産性',data:[],borderColor:'#8b5cf6',tension:0.3},
+          {label:'精神力',data:[],borderColor:'#f97316',tension:0.3},
+        ]
+      },
+      options:{
+        responsive:true,
+        scales:{
+          x:{ ticks:{ color:'#fff' } },
+          y:{ ticks:{ color:'#fff' }, beginAtZero:true, max:100 }
+        },
+        plugins:{ legend:{ labels:{ color:'#fff' } } }
+      }
+    });
 
-    // レベル計算（最大100。逓増必要ポイント）
-    const LEVEL_K = 100/Math.sqrt(500); // ≈ 4.472135955
+    // 換算関数
+    function convertStudy(hours){ return Math.min(100, Math.floor(hours / 10)); }
+    function convertAsset(millionYen){ return Math.min(100, Math.floor(millionYen / 10)); }
+    function convertProductivity(screenTime){ return Math.max(0, Math.min(100, 100 - (screenTime * 10))); }
+
+    // レベル計算
+    const LEVEL_K = 100/Math.sqrt(500);
     function calcLevel(total){
       let lvl = Math.floor(Math.sqrt(total) * LEVEL_K);
       if(lvl < 0) lvl = 0;
@@ -179,23 +211,36 @@
     }
 
     function updateCharts(latest){
-      // レーダー
       radarChart.data.datasets[0].data = [latest.training,latest.study,latest.asset,latest.continuity,latest.productivity,latest.mental];
       radarChart.update();
 
-      // 推移
       db.allDocs({include_docs:true}).then(res=>{
         let labels=[],data=[];
+        let tArr=[],sArr=[],aArr=[],cArr=[],pArr=[],mArr=[];
         res.rows.forEach(r=>{
           labels.push(new Date(r.doc.date).toLocaleDateString());
           data.push(r.doc.total);
+          tArr.push(r.doc.training);
+          sArr.push(r.doc.study);
+          aArr.push(r.doc.asset);
+          cArr.push(r.doc.continuity);
+          pArr.push(r.doc.productivity);
+          mArr.push(r.doc.mental);
         });
         lineChart.data.labels=labels;
         lineChart.data.datasets[0].data=data;
         lineChart.update();
+
+        multiLineChart.data.labels=labels;
+        multiLineChart.data.datasets[0].data=tArr;
+        multiLineChart.data.datasets[1].data=sArr;
+        multiLineChart.data.datasets[2].data=aArr;
+        multiLineChart.data.datasets[3].data=cArr;
+        multiLineChart.data.datasets[4].data=pArr;
+        multiLineChart.data.datasets[5].data=mArr;
+        multiLineChart.update();
       });
 
-      // 平均（生産性を除く5項目）
       avgScoreEl.textContent = (latest.total/5).toFixed(1);
       lastDateEl.textContent = new Date(latest.date).toLocaleString();
     }
@@ -203,7 +248,6 @@
     function updateLevel(total){
       const level = calcLevel(total);
       levelValueEl.textContent = level;
-      // レベルバーはレベルに連動（0〜100%）
       levelBarEl.style.width = level + '%';
       const remain = nextLevelRemaining(total);
       nextLevelInfoEl.textContent = `次のレベルまであと ${remain} ポイント`;
@@ -227,20 +271,17 @@
 
     document.getElementById('statusForm').addEventListener('submit',e=>{
       e.preventDefault();
-      // 入力取得（筋力/継続力/精神力は0〜100の直接入力として扱う）
       let training=Math.min(100,parseInt(document.getElementById('training').value)||0);
-      let studyInput=parseInt(document.getElementById('study').value)||0;          // 時間(h)
-      let assetInput=parseInt(document.getElementById('asset').value)||0;          // 万円
+      let studyInput=parseInt(document.getElementById('study').value)||0;
+      let assetInput=parseInt(document.getElementById('asset').value)||0;
       let continuity=Math.min(100,parseInt(document.getElementById('continuity').value)||0);
-      let productivityInput=parseInt(document.getElementById('productivity').value)||0; // 時間(h)
+      let productivityInput=parseInt(document.getElementById('productivity').value)||0;
       let mental=Math.min(100,parseInt(document.getElementById('mental').value)||0);
 
-      // 換算
       let study=convertStudy(studyInput);
       let asset=convertAsset(assetInput);
       let productivity=convertProductivity(productivityInput);
 
-      // 合計（生産性は含めない）→ 最大500
       let total = training+study+asset+continuity+mental;
 
       const doc={
@@ -254,14 +295,10 @@
         updateCharts(doc);
         updateLevel(total);
         refreshHistory();
-        // 次回入力保持（面倒を減らす）
-        localStorage.setItem('lastInputs', JSON.stringify({
-          training, studyInput, assetInput, continuity, productivityInput, mental
-        }));
+        localStorage.setItem('lastInputs', JSON.stringify({training, studyInput, assetInput, continuity, productivityInput, mental}));
       });
     });
 
-    // 初期化
     window.addEventListener('load',()=>{
       refreshHistory();
       db.allDocs({include_docs:true}).then(res=>{
